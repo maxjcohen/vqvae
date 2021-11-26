@@ -36,7 +36,6 @@ def get_dataloader(train=True):
         download=True,
         transform=transforms.ToTensor(),
     )
-    dataset.data = dataset.data[:100]
     return DataLoader(
         dataset=dataset,
         batch_size=BATCH_SIZE,
