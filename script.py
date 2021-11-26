@@ -53,7 +53,7 @@ def train(model, dataloader):
             self.hist = {"loss": [], "rank": []}
 
         def training_step(self, batch, batch_idx):
-            images, labels = batch
+            images, _ = batch
             encodings = self.model.encode(images)
             qt = self.model.quanticize(encodings)
             loss_latent = torch.nn.functional.mse_loss(encodings, qt)
@@ -73,6 +73,15 @@ def train(model, dataloader):
     train_model = LITVqvae(model, lr=1e-3)
     trainer = pl.Trainer(max_epochs=EPOCHS, gpus=1)
     trainer.fit(train_model, dataloader)
+
+    for idx, (loss_name, loss_values) in enumerate(train_model.hist.items()):
+        plt.subplot(len(train_model.hist), 1, idx+1)
+        loss_values = np.array(loss_values)
+        plt.plot(loss_values, alpha=.4)
+        plt.plot(np.arange(1, len(loss_values), len(dataloader)), loss_values.reshape(EPOCHS, len(dataloader)).mean(-1))
+        plt.xlabel("Epochs")
+        plt.ylabel(loss_name)
+    plt.savefig("hist.jpg")
 
     # Save model
     torch.save(model.state_dict(), "model.pt")
