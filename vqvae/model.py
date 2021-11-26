@@ -130,4 +130,6 @@ class VQVAE(nn.Module):
         -------
         decoded representation.
         """
-        return self.decode(self.encode(x))
+        encodings = self.encode(x)
+        qt = self.quanticize(encodings)
+        return self.decode(qt)
