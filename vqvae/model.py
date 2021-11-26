@@ -8,16 +8,27 @@ from .codebook import Codebook
 
 
 class VQVAE(nn.Module):
-    """ResNet model for the MNIST dataset.
+    """VQVAE model based on a ResNet architecture.
 
-    This model contains an encoder model, based on ResNet blocks, and a deconvolution
-    decoder going through the same dimensions as the encoder.
+    The input vectors are first encoded, then quanticized using a codebook, and finally
+    decoded going through the same dimensions as the encoder.
 
     Example
     -------
-        channel_sizes = [16, 64, 128]
-        strides = [2, 3, 3]
-        MNISTModel(in_channel=3, channel_sizes=channel_sizes, strides=strides)
+        n_codebook = 128
+        dim_codebook = 32
+        channel_sizes = [16, 64, dim_codebook]
+        strides = [2, 2, 1]
+        MNISTModel(in_channel=3, channel_sizes, n_codebook, dim_codebook, strides)
+
+    Note
+    ----
+    In the following documentation, we will use the following variable names:
+    `B`: batch size.
+    `W` and `H`: width and height of images or feature map.
+    `C`: number of channels of the final encoding layers. This must be equal to the
+    dimension of the codebooks.
+    `N`: number of codebooks.
     """
 
     def __init__(
@@ -69,17 +80,15 @@ class VQVAE(nn.Module):
         self.emb = Codebook(n_codebook, dim_codebook)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute the encoding of the input tensor, compute distance with codebook, quanticize.
-
-        Intermediate results distances and qt are stored.
+        """Compute the encoding of the input tensor.
 
         Parameters
         ----------
-        x: input tensor.
+        x: input tensor with shape `(B, *, *, *)`.
 
         Returns
         -------
-        encoded vector.
+        encoded vector with shape `(B, C, W, H)`.
         """
         self.encoder_shapes = []
 
@@ -88,7 +97,20 @@ class VQVAE(nn.Module):
             x = layer(x)
         return x
 
-    def quanticize(self, encoding):
+    def quanticize(self, encoding: torch.Tensor) -> torch.Tensor:
+        """Quanticize an encoding vector with respect to the codebook.
+
+        Compute the distances between the encoding and the codebook vectors, and assign
+        the closest codebook to each point in the feature map.
+
+        Parameters
+        ----------
+        encoding: input tensor with shape `(B, C, W, H)`.
+
+        Returns
+        -------
+        Quanticized tensor with shape `(B, C, W, H)`.
+        """
         self.distances = self.emb.compute_distances(encoding.permute(0, 2, 3, 1))
         self.qt = self.emb.quantize(self.distances)
         vq = self.emb.codebook_lookup(self.qt)
@@ -100,11 +122,12 @@ class VQVAE(nn.Module):
 
         Parameters
         ----------
-        x: encoded vector.
+        x: encoded vector with shape `(B, C, W, H)`.
 
         Returns
         -------
-        decoded vector.
+        decoded vector with shape `(B, *, *, *)` matching the input vector of the
+        encoding process.
         """
         for idx, (layer, output_shape) in enumerate(
             zip(self.decoder, reversed(self.encoder_shapes))
@@ -115,15 +138,15 @@ class VQVAE(nn.Module):
         return x
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Propagate the input tensor through the encoder and decoder.
+        """Propagate the input tensor through the encoder, quanticize and decode.
 
         Parameters
         ----------
-        x: input tensor.
+        x: input tensor with shape `(B, *, *, *)`.
 
         Returns
         -------
-        decoded representation.
+        decoded representation with equivalent shape `(B, *, *, *)`.
         """
         encodings = self.encode(x)
         qt = self.quanticize(encodings)
