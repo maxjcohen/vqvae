@@ -24,7 +24,7 @@ channel_sizes = [16, 32, DIM_CODEBOOK]
 strides = [2, 2, 1]
 
 
-def get_dataloader(train=True, args):
+def get_dataloader(args, train=True):
     dataset = datasets.CIFAR10(
         "./datasets/CIFAR10",
         train=train,
@@ -39,7 +39,7 @@ def get_dataloader(train=True, args):
     )
 
 
-def train(model, dataloader, args):
+def train(args, model, dataloader):
     # Traininp loop
     class LITVqvae(pl.LightningModule):
         def __init__(self, model, lr=1e-3):
@@ -116,11 +116,11 @@ if __name__ == "__main__":
         dim_codebook=DIM_CODEBOOK,
         strides=strides,
     )
-    dataloader_train = get_dataloader(train=True, args)
+    dataloader_train = get_dataloader(args, train=True)
 
     if "train" in args.actions:
-        train(model, dataloader_train, args)
-        dataloader_val = get_dataloader(train=False, args)
+        train(args, model, dataloader_train)
+        dataloader_val = get_dataloader(args, train=False)
         reconstruction_cost = metrics.reconstruction(model, dataloader_val)
         print(f"Reconstruction cost: {reconstruction_cost.item()}.")
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
             model.load_state_dict(torch.load("model.pt"))
         except FileNotFoundError:
             print("Model weights not found, starting training.")
-            train(model, dataloader, args)
+            train(args, model, dataloader)
         distances = export_distances(model, dataloader_train, reduction="none")
         print(f"Export distances with shape {distances.shape}.")
         torch.save(distances, "distances.pt")
