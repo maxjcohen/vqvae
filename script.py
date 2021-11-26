@@ -13,8 +13,8 @@ import src.metrics as metrics
 from src.utils import export_distances
 
 # Training settings
-EPOCHS = 1
-BATCH_SIZE = 16
+EPOCHS = 100
+BATCH_SIZE = 32
 NUM_WORKERS = 4
 
 # Dataset settings
@@ -25,8 +25,8 @@ H = 28
 # Model settings
 N_CODEBOOK = 256
 DIM_CODEBOOK = 32
-channel_sizes = [16, DIM_CODEBOOK]
-strides = [2, 2]
+channel_sizes = [16, 32, DIM_CODEBOOK]
+strides = [2, 2, 1]
 
 
 def get_dataloader(train=True):
