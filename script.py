@@ -71,10 +71,13 @@ def train(model, dataloader, args):
     trainer.fit(train_model, dataloader)
 
     for idx, (loss_name, loss_values) in enumerate(train_model.hist.items()):
-        plt.subplot(len(train_model.hist), 1, idx+1)
+        plt.subplot(len(train_model.hist), 1, idx + 1)
         loss_values = np.array(loss_values)
-        plt.plot(loss_values, alpha=.4)
-        plt.plot(np.arange(1, len(loss_values), len(dataloader)), loss_values.reshape(EPOCHS, len(dataloader)).mean(-1))
+        plt.plot(loss_values, alpha=0.4)
+        plt.plot(
+            np.arange(1, len(loss_values), len(dataloader)),
+            loss_values.reshape(args.epochs, len(dataloader)).mean(-1),
+        )
         plt.xlabel("Epochs")
         plt.ylabel(loss_name)
     plt.savefig("hist.jpg")
