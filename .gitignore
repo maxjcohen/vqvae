@@ -1,6 +1,9 @@
 # Datasets
 /datasets/
 
+# Models and tensors.
+*.pt
+
 # Python env
 *.pyc
 .env
