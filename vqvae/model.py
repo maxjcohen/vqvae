@@ -39,12 +39,9 @@ class VQVAE(nn.Module):
 
         strides = strides or [1 for _ in channel_sizes]
         assert len(strides) == len(channel_sizes)
-
         assert channel_sizes[-1] == dim_codebook
 
-        # channel_sizes.insert(0, in_channel)
         channel_sizes = [in_channel, *channel_sizes]
-
         self.encoder = torch.nn.ModuleList(
             [
                 ResNetBlock(in_channel, out_channel, stride=stride)
@@ -53,7 +50,6 @@ class VQVAE(nn.Module):
                 )
             ]
         )
-
         self.decoder = torch.nn.ModuleList(
             [
                 nn.ConvTranspose2d(
@@ -70,7 +66,6 @@ class VQVAE(nn.Module):
         )
 
         self.decoder_activation = nn.ReLU()
-
         self.emb = Codebook(n_codebook, dim_codebook)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
