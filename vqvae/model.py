@@ -7,7 +7,7 @@ from .modules import ResNetBlock
 from .codebook import Codebook
 
 
-class MNISTModel(nn.Module):
+class VQVAE(nn.Module):
     """ResNet model for the MNIST dataset.
 
     This model contains an encoder model, based on ResNet blocks, and a deconvolution
