@@ -10,7 +10,7 @@ from .codebook import Codebook
 class VQVAE(nn.Module):
     """VQVAE model based on a ResNet architecture.
 
-    The input vectors are first encoded, then quanticized using a codebook, and finally
+    The input vectors are first encoded, then quantize using a codebook, and finally
     decoded going through the same dimensions as the encoder.
 
     Example
@@ -97,8 +97,8 @@ class VQVAE(nn.Module):
             x = layer(x)
         return x
 
-    def quanticize(self, encoding: torch.Tensor) -> torch.Tensor:
-        """Quanticize an encoding vector with respect to the codebook.
+    def quantize(self, encoding: torch.Tensor) -> torch.Tensor:
+        """Quantize an encoding vector with respect to the codebook.
 
         Compute the distances between the encoding and the codebook vectors, and assign
         the closest codebook to each point in the feature map.
@@ -109,13 +109,13 @@ class VQVAE(nn.Module):
 
         Returns
         -------
-        Quanticized tensor with shape `(B, C, W, H)`.
+        Encoding tensor with shape `(B, C, W, H)`.
         """
-        self.distances = self.emb.compute_distances(encoding.permute(0, 2, 3, 1))
-        self.qt = self.emb.quantize(self.distances)
-        vq = self.emb.codebook_lookup(self.qt)
-        vq = vq.permute(0, 3, 1, 2)
-        return vq
+        distances = self.emb.compute_distances(encoding.permute(0, 2, 3, 1))
+        quantized = torch.argmin(distances, dim=-1)
+        encodings = self.emb.codebook_lookup(quantized)
+        encodings = encodings.permute(0, 3, 1, 2)
+        return encodings
 
     def decode(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the decoding of the input encoded vector.
@@ -138,7 +138,7 @@ class VQVAE(nn.Module):
         return x
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Propagate the input tensor through the encoder, quanticize and decode.
+        """Propagate the input tensor through the encoder, quantize and decode.
 
         Parameters
         ----------
@@ -149,5 +149,5 @@ class VQVAE(nn.Module):
         decoded representation with equivalent shape `(B, *, *, *)`.
         """
         encodings = self.encode(x)
-        qt = self.quanticize(encodings)
+        qt = self.quantize(encodings)
         return self.decode(qt)

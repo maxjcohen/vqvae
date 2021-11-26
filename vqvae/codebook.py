@@ -6,35 +6,35 @@ class Codebook(torch.nn.Embedding):
         super().__init__(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
         self.weight.data.uniform_(-1 / num_embeddings, 1 / num_embeddings)
 
-    def compute_distances(self, encodings, reduction="mean"):
-        """
-        reduction: mean | none
-        encodings: (B, W, H, C)
+    def compute_distances(
+        self, encodings: torch.Tensor, reduction: str = "mean"
+    ) -> torch.Tensor:
+        """Compute distance between encodings and codebooks.
 
-        returns
-        distances (B, W, H, N) if "mean" else (B, W, H, C, N)
+        Parameters
+        ----------
+        encodings: encoding tensor with shape `(B, W, H, C)`.
+        reduction: If `"mean"`, average distances of the codebooks size dimension.
+
+        Returns
+        -------
+        distances with shape `(B, W, H, N)` if reduction is `"mean"` else `(B, W, H, C,
+        N)`.
         """
         distances = (encodings.unsqueeze(-2) - self.weight).square()
         if reduction == "mean":
             distances = distances.mean(-1)
         return distances
 
-    @staticmethod
-    def quantize(distances):
-        """
-        distances: (B, W, H, N)
+    def codebook_lookup(self, quantized: torch.Tensor) -> torch.Tensor:
+        """Associate vectors in the quantized tensor with the corresponding codebook.
 
-        returns
-        indexes: (B, W, H)
-        """
-        return torch.argmin(distances, dim=-1)
+        Parameters
+        ----------
+        quantized: Discrete vector with shape (B, *).
 
-    def codebook_lookup(self, qt):
+        Returns
+        -------
+        Tensor of codebooks with shape `(B, *)`.
         """
-        qt: (B, W, H)
-
-        returns
-        zq: (B, W, H, C)
-
-        """
-        return self(qt)
+        return self(quantized)
