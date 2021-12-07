@@ -20,8 +20,8 @@ H = 28
 # Model settings
 N_CODEBOOK = 256
 DIM_CODEBOOK = 32
-channel_sizes = [16, 32, DIM_CODEBOOK]
-strides = [2, 2, 1]
+channel_sizes = [16, 32, 32, DIM_CODEBOOK]
+strides = [2, 2, 1, 1]
 
 def configure_parser():
     parser = argparse.ArgumentParser(description="vqvae helper script.")
