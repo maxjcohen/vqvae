@@ -23,6 +23,15 @@ DIM_CODEBOOK = 32
 channel_sizes = [16, 32, 32, DIM_CODEBOOK]
 strides = [2, 2, 1, 1]
 
+try:
+    from aim.pytorch_lightning import AimLogger
+
+    logger = AimLogger()
+except ImportError:
+    logger = None
+print(f"Using logger {logger}.")
+
+
 def configure_parser():
     parser = argparse.ArgumentParser(description="vqvae helper script.")
     parser.add_argument("actions", nargs="+")
@@ -46,6 +55,7 @@ def configure_parser():
     )
     return parser
 
+
 def get_dataloader(args, train=True):
     dataset = datasets.CIFAR10(
         "./datasets/CIFAR10",
@@ -59,7 +69,6 @@ def get_dataloader(args, train=True):
         shuffle=train,
         num_workers=args.num_workers,
     )
-
 
 
 if __name__ == "__main__":
