@@ -26,7 +26,7 @@ strides = [2, 2, 1, 1]
 try:
     from aim.pytorch_lightning import AimLogger
 
-    logger = AimLogger()
+    logger = AimLogger(experiment="vqvae", system_tracking_interval=None)
 except ImportError:
     logger = None
 print(f"Using logger {logger}.")
