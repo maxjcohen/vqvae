@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
     if "export" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
-        export_distances(model, dataloader_train, reduction="none")
+        export_distances(model, dataloader_train, export_path="exports")
 
     if "eval" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
