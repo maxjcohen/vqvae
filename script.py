@@ -47,6 +47,7 @@ def train(args, model, dataloader):
             self.lr = lr
             self.model = model
             self.hist = {"loss": [], "rank": []}
+            self.loss = torch.nn.BCEWithLogitsLoss()
 
         def training_step(self, batch, batch_idx):
             images, _ = batch
@@ -56,7 +57,7 @@ def train(args, model, dataloader):
             n_uniques = len(qt.permute(0, 2, 3, 1).view(-1, DIM_CODEBOOK).unique(dim=0))
             qt = encodings + (qt - encodings).detach()
             reconstructions = self.model.decode(qt)
-            loss = torch.nn.functional.mse_loss(images, reconstructions)
+            loss = self.loss(reconstructions, images)
             loss = loss + loss_latent
             self.hist["loss"].append(loss.item())
             self.hist["rank"].append(n_uniques)
@@ -108,6 +109,7 @@ if __name__ == "__main__":
         help="Batch size for dataloaders. Default is 16.",
     )
     args = parser.parse_args()
+    device = torch.device('cuda:0')
     # Load model
     model = VQVAE(
         in_channel=3,
@@ -121,7 +123,8 @@ if __name__ == "__main__":
     if "train" in args.actions:
         train(args, model, dataloader_train)
         dataloader_val = get_dataloader(args, train=False)
-        reconstruction_cost = metrics.reconstruction(model, dataloader_val)
+        model.to(device)
+        reconstruction_cost = metrics.reconstruction(model, dataloader_val, device)
         print(f"Reconstruction cost: {reconstruction_cost.item()}.")
 
     if "export" in args.actions:

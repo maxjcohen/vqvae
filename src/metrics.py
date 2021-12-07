@@ -4,10 +4,11 @@ from tqdm import tqdm
 
 
 @torch.no_grad()
-def reconstruction(model, dataloader):
+def reconstruction(model, dataloader, device='cpu'):
     cost = []
     for images, _ in tqdm(dataloader, total=len(dataloader)):
-        reconstructions = model(images)
+        images = images.to(device)
+        reconstructions = torch.sigmoid(model(images))
         cost.append(F.mse_loss(reconstructions, images))
     return torch.Tensor(cost).mean()
 
