@@ -12,16 +12,6 @@ from vqvae.trainer import LITVqvae
 
 from src.utils import export_distances
 
-# Dataset settings
-C = 3
-W = 28
-H = 28
-
-# Model settings
-N_CODEBOOK = 256
-DIM_CODEBOOK = 32
-channel_sizes = [16, 32, 32, DIM_CODEBOOK]
-strides = [2, 2, 1, 1]
 
 try:
     from aim.pytorch_lightning import AimLogger
@@ -53,6 +43,18 @@ def configure_parser():
         type=int,
         help="Batch size for dataloaders. Default is 16.",
     )
+    parser.add_argument(
+        "--num-codebook",
+        default=256,
+        type=int,
+        help="Number of codebooks.",
+    )
+    parser.add_argument(
+        "--dim-codebook",
+        default=32,
+        type=int,
+        help="Dimension of codebook vectors.",
+    )
     return parser
 
 
@@ -74,11 +76,13 @@ def get_dataloader(args, train=True):
 if __name__ == "__main__":
     args = configure_parser().parse_args()
     # Load model
+    channel_sizes = [16, 32, 32, args.dim_codebook]
+    strides = [2, 2, 1, 1]
     model = VQVAE(
         in_channel=3,
         channel_sizes=channel_sizes,
-        n_codebook=N_CODEBOOK,
-        dim_codebook=DIM_CODEBOOK,
+        n_codebook=args.num_codebook,
+        dim_codebook=args.dim_codebook,
         strides=strides,
     )
     train_model = LITVqvae(model, lr=3e-4)
