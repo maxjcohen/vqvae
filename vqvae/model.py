@@ -79,6 +79,8 @@ class VQVAE(nn.Module):
         self.decoder_activation = nn.ReLU()
         self.emb = Codebook(n_codebook, dim_codebook)
 
+        self._dim_codebook = dim_codebook
+
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the encoding of the input tensor.
 
@@ -151,3 +153,7 @@ class VQVAE(nn.Module):
         encodings = self.encode(x)
         qt = self.quantize(encodings)
         return self.decode(qt)
+
+    @property
+    def dim_codebook(self):
+        return self._dim_codebook
