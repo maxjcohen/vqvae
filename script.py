@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from vqvae import VQVAE
 from vqvae.trainer import LITVqvae
 
-from src.utils import export_distances
+from src.utils import export_distances, export_indexes
 
 
 try:
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     if "export" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
-        export_distances(model, dataloader_train, export_path="exports")
+        export_indexes(model, dataloader_train, export_path="indexes.pt")
 
     if "eval" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
