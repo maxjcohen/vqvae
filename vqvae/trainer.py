@@ -24,7 +24,7 @@ class LITVqvae(pl.LightningModule):
         loss = loss + loss_latent
         self.hist["loss"].append(loss.item())
         self.hist["rank"].append(n_uniques)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
