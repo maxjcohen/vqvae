@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from vqvae import VQVAE
 from vqvae.trainer import LITVqvae
 
-from src.utils import export_distances, export_indexes
+import src.export as export
 
 
 try:
@@ -75,6 +75,7 @@ def get_dataloader(args, train=True):
 
 if __name__ == "__main__":
     args = configure_parser().parse_args()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Load model
     channel_sizes = [16, 32, 32, args.dim_codebook]
     strides = [2, 2, 1, 1]
@@ -99,7 +100,9 @@ if __name__ == "__main__":
 
     if "export" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
-        export_indexes(model, dataloader_train, export_path="indexes.pt")
+        export.indexes(model, dataloader_train, export_path="indexes.pt", device_model=device)
+        export.distances(model, dataloader_train, export_path="distances.pt", device_model=device)
+        export.codebooks(model, dataloader_train, export_path="codebooks.pt", device_model=device)
 
     if "eval" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
