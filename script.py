@@ -48,6 +48,7 @@ parser.add_argument(
 parser.add_argument(
     "--dim-codebook", default=32, type=int, help="Dimension of codebook vectors."
 )
+parser.add_argument("--device", type=str, help="Specify torch device.")
 
 
 def get_dataloader(args, train=True):
@@ -67,7 +68,8 @@ def get_dataloader(args, train=True):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = args.device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device {device}.")
     # Load model
     channel_sizes = [16, 32, 32, args.dim_codebook]
     strides = [2, 2, 1, 1]
