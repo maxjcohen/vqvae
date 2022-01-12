@@ -43,6 +43,14 @@ def distances(model, batch, device="cpu"):
 
 
 @export_iteration
+def encodings(model, batch, device="cpu"):
+    """Export encodings (i.e. Z_e)."""
+    images, _ = batch
+    encodings = model.encode(images.to(device))
+    return encodings
+
+
+@export_iteration
 def indexes(model, batch, device="cpu"):
     """Export indexes of the closest codebook."""
     images, _ = batch
