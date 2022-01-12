@@ -66,7 +66,7 @@ def get_dataloader(args, train=True):
 
 
 if __name__ == "__main__":
-    args = configure_parser().parse_args()
+    args = parser.parse_args()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Load model
     channel_sizes = [16, 32, 32, args.dim_codebook]
