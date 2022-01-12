@@ -100,9 +100,9 @@ if __name__ == "__main__":
 
     if "export" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
-        export.indexes(model, dataloader_train, export_path="indexes.pt", device_model=device)
-        export.distances(model, dataloader_train, export_path="distances.pt", device_model=device)
-        export.codebooks(model, dataloader_train, export_path="codebooks.pt", device_model=device)
+        export.encodings(
+            model, dataloader_train, export_path="encodings.pt", device_model=device
+        )
 
     if "eval" in args.actions:
         model.load_state_dict(torch.load("model.pt"))
