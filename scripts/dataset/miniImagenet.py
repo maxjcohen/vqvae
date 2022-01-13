@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import RichModelSummary, ModelCheckpoint
 import matplotlib.pyplot as plt
 
 from vqvae import VQVAE
@@ -80,7 +81,14 @@ if __name__ == "__main__":
         strides=strides,
     )
     train_model = LITVqvae(model, lr=3e-4)
-    trainer = pl.Trainer(max_epochs=args.epochs, gpus=1, logger=logger)
+    # Define checkpoints
+    checkpoint_callback = ModelCheckpoint("checkpoints/", monitor="train_loss")
+    trainer = pl.Trainer(
+        max_epochs=args.epochs,
+        gpus=1,
+        logger=logger,
+        callbacks=[checkpoint_callback, RichModelSummary()],
+    )
 
     # Load dataset
     dataloader_train = get_dataloader(args, split="train")
