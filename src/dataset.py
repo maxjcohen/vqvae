@@ -45,6 +45,8 @@ class MiniImagenet(Dataset):
         image = self.dset_images[self.labels[item // self.n_image_per_class]][
             item % self.n_image_per_class
         ]
+        # Normalize
+        image = image / 255
         # Swap axis to channel first
         image = image.transpose(2, 0, 1)
         # Convert to Tensor
