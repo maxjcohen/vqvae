@@ -3,6 +3,7 @@
 
 # Models and tensors.
 *.pt
+/checkpoints/
 
 # Python env
 *.pyc
