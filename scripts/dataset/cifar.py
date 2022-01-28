@@ -3,17 +3,17 @@ import datetime
 
 import torch
 from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from vqvae import VQVAE
 from vqvae.trainer import LITVqvae
 
-from src.dataset import MiniImagenet
 from ..utils import parser, get_logger
 
 
-EXP_NAME = "vqvae-miniImagenet"
+EXP_NAME = "vqvae-cifar"
 exp_name = f"{EXP_NAME}_{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}"
 
 # Load model
@@ -32,12 +32,22 @@ train_model = LITVqvae(model, lr=3e-4)
 
 
 def get_dataloader(args, split="train"):
-    dataset = torch.randn(1000, 3, 84, 84)
+    train = split == "train"
+    def collate_fn(batch):
+        return torch.stack([images for images, label in batch])
+
+    dataset = datasets.CIFAR10(
+        "./datasets/CIFAR10",
+        train=train,
+        download=True,
+        transform=transforms.ToTensor(),
+    )
     return DataLoader(
         dataset=dataset,
         batch_size=args.batch_size,
-        shuffle=split == "train",
+        shuffle=train,
         num_workers=args.num_workers,
+        collate_fn=collate_fn,
     )
 
 
