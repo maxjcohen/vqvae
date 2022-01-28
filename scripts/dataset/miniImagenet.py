@@ -28,7 +28,7 @@ model = VQVAE(
     dim_codebook=dim_codebook,
     strides=strides,
 )
-train_model = LITVqvae(model, lr=3e-4)
+litmodule = LITVqvae(model, lr=3e-4)
 
 
 def get_dataloader(args, split="train"):
@@ -59,6 +59,6 @@ if __name__ == "__main__":
     dataloader_train = get_dataloader(args, split="train")
     dataloader_val = get_dataloader(args, split="val")
 
-    trainer.fit(train_model, dataloader_train, val_dataloaders=dataloader_val)
+    trainer.fit(litmodule, dataloader_train, val_dataloaders=dataloader_val)
     # Save model weights
     torch.save(model.state_dict(), "model.pt")
