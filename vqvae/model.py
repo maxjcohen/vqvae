@@ -15,28 +15,28 @@ class VQVAE(nn.Module):
 
     Example
     -------
-        n_codebook = 128
+        num_codebook = 128
         dim_codebook = 32
         channel_sizes = [16, 64, dim_codebook]
         strides = [2, 2, 1]
-        MNISTModel(in_channel=3, channel_sizes, n_codebook, dim_codebook, strides)
+        VQVAE(num_codebook, dim_codebook, 3, channel_sizes, strides)
 
     Note
     ----
     In the following documentation, we will use the following variable names:
     `B`: batch size.
     `W` and `H`: width and height of images or feature map.
-    `C`: number of channels of the final encoding layers. This must be equal to the
+    `D`: number of channels of the final encoding layers. This must be equal to the
     dimension of the codebooks.
-    `N`: number of codebooks.
+    `K`: number of codebooks.
     """
 
     def __init__(
         self,
+        num_codebook: int,
+        dim_codebook: int,
         in_channel: int,
         channel_sizes: List[int],
-        n_codebook,
-        dim_codebook,
         strides: Optional[List[int]] = None,
     ) -> None:
         """
@@ -47,7 +47,6 @@ class VQVAE(nn.Module):
         strides: sequence of strides, default is 1 for every layer.
         """
         super().__init__()
-
         strides = strides or [1 for _ in channel_sizes]
         assert len(strides) == len(channel_sizes)
         assert channel_sizes[-1] == dim_codebook
@@ -77,9 +76,7 @@ class VQVAE(nn.Module):
         )
 
         self.decoder_activation = nn.ReLU()
-        self.emb = Codebook(n_codebook, dim_codebook)
-
-        self._dim_codebook = dim_codebook
+        self.codebook = Codebook(num_codebook, dim_codebook)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the encoding of the input tensor.
@@ -90,7 +87,7 @@ class VQVAE(nn.Module):
 
         Returns
         -------
-        encoded vector with shape `(B, C, W, H)`.
+        Encoded vector with shape `(B, D, W, H)`.
         """
         self.encoder_shapes = []
 
@@ -107,24 +104,24 @@ class VQVAE(nn.Module):
 
         Parameters
         ----------
-        encoding: input tensor with shape `(B, C, W, H)`.
+        encoding: input tensor with shape `(B, D, W, H)`.
 
         Returns
         -------
-        Encoding tensor with shape `(B, C, W, H)`.
+        Quantized tensor with shape `(B, D, W, H)`.
         """
-        distances = self.emb.compute_distances(encoding.permute(0, 2, 3, 1))
-        quantized = torch.argmin(distances, dim=-1)
-        encodings = self.emb.codebook_lookup(quantized)
-        encodings = encodings.permute(0, 3, 1, 2)
-        return encodings
+        distances = self.codebook.compute_distances(encoding.permute(0, 2, 3, 1))
+        indices = torch.argmin(distances, dim=-1)
+        quantized = self.codebook.codebook_lookup(indices)
+        quantized = quantized.permute(0, 3, 1, 2)
+        return quantized
 
-    def decode(self, x: torch.Tensor) -> torch.Tensor:
+    def decode(self, encoding: torch.Tensor) -> torch.Tensor:
         """Compute the decoding of the input encoded vector.
 
         Parameters
         ----------
-        x: encoded vector with shape `(B, C, W, H)`.
+        x: encoded vector with shape `(B, D, W, H)`.
 
         Returns
         -------
@@ -134,10 +131,10 @@ class VQVAE(nn.Module):
         for idx, (layer, output_shape) in enumerate(
             zip(self.decoder, reversed(self.encoder_shapes))
         ):
-            x = layer(x, output_size=output_shape)
+            encoding = layer(encoding, output_size=output_shape)
             if idx < len(self.encoder_shapes) - 1:
-                x = self.decoder_activation(x)
-        return x
+                encoding = self.decoder_activation(encoding)
+        return encoding
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Propagate the input tensor through the encoder, quantize and decode.
@@ -150,10 +147,6 @@ class VQVAE(nn.Module):
         -------
         decoded representation with equivalent shape `(B, *, *, *)`.
         """
-        encodings = self.encode(x)
-        qt = self.quantize(encodings)
-        return self.decode(qt)
-
-    @property
-    def dim_codebook(self):
-        return self._dim_codebook
+        encoding = self.encode(x)
+        quantized = self.quantize(encoding)
+        return self.decode(quantized)

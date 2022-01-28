@@ -22,10 +22,10 @@ num_codebook = 256
 channel_sizes = [16, 32, 32, dim_codebook]
 strides = [2, 2, 1, 1]
 model = VQVAE(
+    num_codebook=num_codebook,
+    dim_codebook=dim_codebook,
     in_channel=3,
     channel_sizes=channel_sizes,
-    n_codebook=num_codebook,
-    dim_codebook=dim_codebook,
     strides=strides,
 )
 litmodule = LITVqvae(model, lr=3e-4)
