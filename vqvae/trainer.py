@@ -7,7 +7,6 @@ class LITVqvae(pl.LightningModule):
         super().__init__()
         self.lr = lr
         self.model = model
-        self.hist = {"loss": [], "rank": []}
         self.loss = torch.nn.BCEWithLogitsLoss()
 
     def training_step(self, batch, batch_idx):
@@ -22,9 +21,8 @@ class LITVqvae(pl.LightningModule):
         reconstructions = self.model.decode(qt)
         loss = self.loss(reconstructions, images)
         loss = loss + loss_latent
-        self.hist["loss"].append(loss.item())
-        self.hist["rank"].append(n_uniques)
         self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log("train_rank", loss, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -39,8 +37,8 @@ class LITVqvae(pl.LightningModule):
         )
         reconstruction_loss = torch.nn.functional.mse_loss(reconstructions, images)
         # Log
-        self.log("reconstruction_loss", reconstruction_loss)
-        self.log("rank", n_uniques)
+        self.log("val_reconstruction_loss", reconstruction_loss)
+        self.log("val_rank", n_uniques)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(self.lr))
