@@ -96,26 +96,6 @@ class VQVAE(nn.Module):
             x = layer(x)
         return x
 
-    def quantize(self, encoding: torch.Tensor) -> torch.Tensor:
-        """Quantize an encoding vector with respect to the codebook.
-
-        Compute the distances between the encoding and the codebook vectors, and assign
-        the closest codebook to each point in the feature map.
-
-        Parameters
-        ----------
-        encoding: input tensor with shape `(B, D, W, H)`.
-
-        Returns
-        -------
-        Quantized tensor with shape `(B, D, W, H)`.
-        """
-        distances = self.codebook.compute_distances(encoding.permute(0, 2, 3, 1))
-        indices = torch.argmin(distances, dim=-1)
-        quantized = self.codebook.codebook_lookup(indices)
-        quantized = quantized.permute(0, 3, 1, 2)
-        return quantized
-
     def decode(self, encoding: torch.Tensor) -> torch.Tensor:
         """Compute the decoding of the input encoded vector.
 
@@ -148,5 +128,9 @@ class VQVAE(nn.Module):
         decoded representation with equivalent shape `(B, *, *, *)`.
         """
         encoding = self.encode(x)
-        quantized = self.quantize(encoding)
+        # Switch to channel last
+        encoding = encoding.permute(0, 2, 3, 1)
+        quantized = self.codebook.quantize(encoding)
+        # Switch to channel first
+        quantized = quantized.permute(0, 3, 1, 2)
         return self.decode(quantized)

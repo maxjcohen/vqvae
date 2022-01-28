@@ -12,9 +12,13 @@ class LITVqvae(pl.LightningModule):
 
     def training_step(self, images, batch_idx):
         encoding = self.model.encode(images)
-        quantized = self.model.quantize(encoding)
+        # Switch to channel last
+        encoding = encoding.permute(0, 2, 3, 1)
+        quantized = self.model.codebook.quantize(encoding)
         loss_latent = F.mse_loss(encoding, quantized)
         quantized = encoding + (quantized - encoding).detach()
+        # Switch to channel first
+        quantized = quantized.permute(0, 3, 1, 2)
         reconstructions = self.model.decode(quantized)
         loss = self.loss(reconstructions, images)
         loss = loss + loss_latent
@@ -22,13 +26,8 @@ class LITVqvae(pl.LightningModule):
         return loss
 
     def validation_step(self, images, batch_idx):
-        # Forward
-        encoding = self.model.encode(images)
-        quantized = self.model.quantize(encoding)
-        reconstructions = torch.sigmoid(self.model.decode(quantized))
-        # Compute loss
+        reconstructions = self.model(images)
         reconstruction_loss = F.mse_loss(reconstructions, images)
-        # Log
         self.log("val_reconstruction_loss", reconstruction_loss)
 
     def configure_optimizers(self):
