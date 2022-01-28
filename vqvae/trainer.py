@@ -9,8 +9,7 @@ class LITVqvae(pl.LightningModule):
         self.model = model
         self.loss = torch.nn.BCEWithLogitsLoss()
 
-    def training_step(self, batch, batch_idx):
-        images, _ = batch
+    def training_step(self, images, batch_idx):
         encodings = self.model.encode(images)
         qt = self.model.quantize(encodings)
         loss_latent = torch.nn.functional.mse_loss(encodings, qt)
@@ -25,8 +24,7 @@ class LITVqvae(pl.LightningModule):
         self.log("train_rank", loss, on_step=False, on_epoch=True)
         return loss
 
-    def validation_step(self, batch, batch_idx):
-        images, _ = batch
+    def validation_step(self, images, batch_idx):
         # Forward
         encodings = self.model.encode(images)
         qt = self.model.quantize(encodings)
