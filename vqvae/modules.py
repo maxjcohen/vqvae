@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -71,7 +71,7 @@ class ResNetBlock(nn.Module):
 
         out = self.block(x)
         out = out + residual
-        out = torch.nn.ReLU()(out)
+        out = nn.ReLU()(out)
         return out
 
     @property
