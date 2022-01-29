@@ -1,44 +1,36 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import torch
 import torch.nn as nn
 
-from .modules import ResNetBlock
-from .codebook import Codebook
+from ..modules import ResNetBlock
 
 
-class VQVAE(nn.Module):
-    """VQVAE model based on a ResNet architecture.
-
-    The input vectors are first encoded, then quantize using a codebook, and finally
-    decoded going through the same dimensions as the encoder.
+class GenericAutoEncoder(nn.Module):
+    """Generic AutoEncoder architecture based on ResNet blocks.
 
     Example
     -------
-        num_codebook = 128
-        dim_codebook = 32
-        channel_sizes = [16, 64, dim_codebook]
+        channel_sizes = [16, 64, 128]
         strides = [2, 2, 1]
-        VQVAE(num_codebook, dim_codebook, 3, channel_sizes, strides)
+        GenericAutoEncoder(3, channel_sizes, strides)
 
     Note
     ----
     In the following documentation, we will use the following variable names:
     `B`: batch size.
-    `W` and `H`: width and height of images or feature map.
-    `D`: number of channels of the final encoding layers. This must be equal to the
-    dimension of the codebooks.
-    `K`: number of codebooks.
+    `W_0` and `H_0`: width and height of the input images.
+    `C`: number of channels of the input images.
+    `W` and `H`: width and height of the feature map.
+    `D`: number of channels of the feature map.
     """
 
     def __init__(
         self,
-        num_codebook: int,
-        dim_codebook: int,
         in_channel: int,
         channel_sizes: List[int],
         strides: Optional[List[int]] = None,
-    ) -> None:
+    ):
         """
         Parameters
         ----------
@@ -49,10 +41,9 @@ class VQVAE(nn.Module):
         super().__init__()
         strides = strides or [1 for _ in channel_sizes]
         assert len(strides) == len(channel_sizes)
-        assert channel_sizes[-1] == dim_codebook
 
         channel_sizes = [in_channel, *channel_sizes]
-        self.encoder = torch.nn.ModuleList(
+        self.encoder = nn.ModuleList(
             [
                 ResNetBlock(in_channel, out_channel, stride=stride)
                 for in_channel, out_channel, stride in zip(
@@ -60,7 +51,7 @@ class VQVAE(nn.Module):
                 )
             ]
         )
-        self.decoder = torch.nn.ModuleList(
+        self.decoder = nn.ModuleList(
             [
                 nn.ConvTranspose2d(
                     in_channels=out_channel,
@@ -76,14 +67,13 @@ class VQVAE(nn.Module):
         )
 
         self.decoder_activation = nn.ReLU()
-        self.codebook = Codebook(num_codebook, dim_codebook)
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute the encoding of the input tensor.
+        """Encode the input tensor.
 
         Parameters
         ----------
-        x: input tensor with shape `(B, *, *, *)`.
+        x: input tensor with shape `(B, C, W_0, H_0)`.
 
         Returns
         -------
@@ -97,15 +87,15 @@ class VQVAE(nn.Module):
         return x
 
     def decode(self, encoding: torch.Tensor) -> torch.Tensor:
-        """Compute the decoding of the input encoded vector.
+        """Decode the input encoded vector.
 
         Parameters
         ----------
-        x: encoded vector with shape `(B, D, W, H)`.
+        encoding: encoded vector with shape `(B, D, W, H)`.
 
         Returns
         -------
-        decoded vector with shape `(B, *, *, *)` matching the input vector of the
+        decoded vector with shape `(B, C, W_0, H_0)` matching the input vector of the
         encoding process.
         """
         for idx, (layer, output_shape) in enumerate(
@@ -117,20 +107,14 @@ class VQVAE(nn.Module):
         return encoding
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Propagate the input tensor through the encoder, quantize and decode.
+        """Propagate the input tensor through the encoder and the decoder.
 
         Parameters
         ----------
-        x: input tensor with shape `(B, *, *, *)`.
+        x: input tensor with shape `(B, C, W_0, H_0)`.
 
         Returns
         -------
-        decoded representation with equivalent shape `(B, *, *, *)`.
+        Decoded representation with equivalent shape `(B, C, W_0, H_0)`.
         """
-        encoding = self.encode(x)
-        # Switch to channel last
-        encoding = encoding.permute(0, 2, 3, 1)
-        quantized = self.codebook.quantize(encoding)
-        # Switch to channel first
-        quantized = quantized.permute(0, 3, 1, 2)
-        return self.decode(quantized)
+        return self.decode(self.encode(x))

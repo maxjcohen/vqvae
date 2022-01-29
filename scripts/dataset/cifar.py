@@ -7,7 +7,7 @@ from torchvision import datasets, transforms
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from vqvae import VQVAE
+from vqvae import CifarVQVAE
 from vqvae.trainer import LITVqvae
 
 from ..utils import parser, get_logger
@@ -19,14 +19,9 @@ exp_name = f"{EXP_NAME}_{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}"
 # Load model
 dim_codebook = 32
 num_codebook = 256
-channel_sizes = [16, 32, 32, dim_codebook]
-strides = [2, 2, 1, 1]
-model = VQVAE(
+model = CifarVQVAE(
     num_codebook=num_codebook,
     dim_codebook=dim_codebook,
-    in_channel=3,
-    channel_sizes=channel_sizes,
-    strides=strides,
 )
 litmodule = LITVqvae(model, lr=3e-4)
 

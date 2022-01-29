@@ -1,1 +1,1 @@
-from .model import VQVAE
+from .vqvae import CifarVQVAE
