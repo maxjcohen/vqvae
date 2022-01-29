@@ -31,4 +31,4 @@ class LITVqvae(pl.LightningModule):
         self.log("val_reconstruction_loss", reconstruction_loss)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(self.lr))
+        return torch.optim.Adam(self.model.parameters(), self.lr)
