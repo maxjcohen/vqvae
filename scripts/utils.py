@@ -19,8 +19,8 @@ parser.add_argument(
     type=int,
     help="Batch size for dataloaders. Default is 16.",
 )
-parser.add_argument("--device", type=str, help="Specify torch device.")
 parser.add_argument("--gpus", default='0', type=str, help="Lightning gpus.")
+parser.add_argument("--lr", default=1e-3, type=float, help="Learning rate.")
 
 def get_logger(exp_name=None):
     try:

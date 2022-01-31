@@ -23,7 +23,6 @@ model = CifarVQVAE(
     num_codebook=num_codebook,
     dim_codebook=dim_codebook,
 )
-litmodule = LITVqvae(model, lr=3e-4)
 
 
 def get_dataloader(args, split="train"):
@@ -49,7 +48,10 @@ def get_dataloader(args, split="train"):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    litmodule = LITVqvae(model, lr=args.lr)
+    # Load logger
     logger = get_logger(exp_name)
+    logger.experiment["hparams"] = vars(args)
     # Define checkpoints
     checkpoint_callback = ModelCheckpoint(
         dirpath=Path("checkpoints") / exp_name, monitor="val_reconstruction_loss"
