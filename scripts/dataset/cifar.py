@@ -52,7 +52,7 @@ if __name__ == "__main__":
     logger = get_logger(exp_name)
     # Define checkpoints
     checkpoint_callback = ModelCheckpoint(
-        dirpath=Path("checkpoints") / exp_name, monitor="train_loss"
+        dirpath=Path("checkpoints") / exp_name, monitor="val_reconstruction_loss"
     )
     trainer = pl.Trainer(
         max_epochs=args.epochs,
