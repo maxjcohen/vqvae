@@ -7,6 +7,7 @@
 
 # Python env
 *.pyc
+.python-version
 .env
 .ipynb_checkpoints/
 lightning_logs
