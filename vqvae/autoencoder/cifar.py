@@ -34,29 +34,33 @@ class CifarAutoEncoder(nn.Module):
                 in_channels=out_channels,
                 out_channels=32,
                 kernel_size=3,
-                stride=2,
+                stride=1,
                 padding=1,
-                output_padding=1,
+            ),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.ConvTranspose2d(
+                in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1
             ),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.ConvTranspose2d(
                 in_channels=32,
-                out_channels=32,
+                out_channels=16,
                 kernel_size=3,
                 stride=2,
                 padding=1,
                 output_padding=1,
             ),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.ConvTranspose2d(
-                in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1
-            ),
             nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.ConvTranspose2d(
-                in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1
+                in_channels=16,
+                out_channels=3,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
             ),
             nn.Sigmoid(),
         )
