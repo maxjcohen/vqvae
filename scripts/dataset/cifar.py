@@ -13,7 +13,7 @@ from vqvae.trainer import LITVqvae
 from ..utils import parser, get_logger
 
 
-exp_name = "vqvae-cifar-newarchi"
+exp_name = "vqvae-cifar-ema"
 
 # Load model
 dim_codebook = 32

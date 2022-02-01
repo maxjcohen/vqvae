@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .codebook import Codebook
+from .codebook import Codebook, EMACodebook
 from .autoencoder import CifarAutoEncoder
 
 
@@ -11,18 +11,21 @@ class CifarVQVAE(nn.Module):
     This module combines an autoencoder for the CIFAR dataset with a vqvae codebook.
     """
 
-    def __init__(self, num_codebook: int, dim_codebook: int):
+    def __init__(self, num_codebook: int, dim_codebook: int, ema:bool=True):
         """
         Parameters
         ----------
         num_codebook: number of codebooks.
         dim_codebook: dimension of each codebook vector. This value will set the number
         of output channels of the encoder.
+        ema: If `True`, codebooks are updated using exponential moving average. Default
+        is `True`.
         """
         super().__init__()
         self.autoencoder = CifarAutoEncoder(out_channels=dim_codebook)
         self.encode = self.autoencoder.encode
         self.decode = self.autoencoder.decode
+        Codebook = EMACodebook if ema else Codebook
         self.codebook = Codebook(num_codebook, dim_codebook)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
