@@ -13,8 +13,7 @@ from vqvae.trainer import LITVqvae
 from ..utils import parser, get_logger
 
 
-EXP_NAME = "vqvae-cifar"
-exp_name = f"{EXP_NAME}_{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}"
+exp_name = "vqvae-cifar-newarchi"
 
 # Load model
 dim_codebook = 32
@@ -54,7 +53,9 @@ if __name__ == "__main__":
     logger.experiment["hparams"] = vars(args)
     # Define checkpoints
     checkpoint_callback = ModelCheckpoint(
-        dirpath=Path("checkpoints") / exp_name, monitor="val_reconstruction_loss"
+        dirpath=Path("checkpoints") / exp_name,
+        filename=f"{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}",
+        monitor="val_reconstruction_loss",
     )
     trainer = pl.Trainer(
         max_epochs=args.epochs,
