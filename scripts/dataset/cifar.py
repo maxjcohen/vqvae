@@ -47,6 +47,7 @@ def get_dataloader(args, split="train"):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    args.lr = args.lr or 1e-3
     litmodule = LITVqvae(model, lr=args.lr)
     # Load logger
     logger = get_logger(exp_name)
