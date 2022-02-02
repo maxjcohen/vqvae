@@ -23,6 +23,12 @@ class GenericAutoEncoder(nn.Module):
     `C`: number of channels of the input images.
     `W` and `H`: width and height of the feature map.
     `D`: number of channels of the feature map.
+
+    Parameters
+    ----------
+    in_channel: number of input channels.
+    channel_sizes: sequence of channel sizes of the encoder and decoder layers.
+    strides: sequence of strides, default is 1 for every layer.
     """
 
     def __init__(
@@ -31,13 +37,6 @@ class GenericAutoEncoder(nn.Module):
         channel_sizes: List[int],
         strides: Optional[List[int]] = None,
     ):
-        """
-        Parameters
-        ----------
-        in_channel: number of input channels.
-        channel_sizes: sequence of channel sizes of the encoder and decoder layers.
-        strides: sequence of strides, default is 1 for every layer.
-        """
         super().__init__()
         strides = strides or [1 for _ in channel_sizes]
         assert len(strides) == len(channel_sizes)

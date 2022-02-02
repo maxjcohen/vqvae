@@ -5,18 +5,18 @@ import torch.nn as nn
 
 
 class ResNetBlock(nn.Module):
-    """Residual connection block, as defined in ResNet."""
+    """Residual connection block, as defined in ResNet.
+
+    Parameters
+    ----------
+    in_channels : number of input channels.
+    out_channels : number of output channels.
+    stride : number of stride for convolutions.
+    """
 
     def __init__(
         self, in_channels: int, out_channels: int, stride: Optional[int] = 1
     ) -> None:
-        """
-        Parameters
-        ----------
-        in_channels : number of input channels.
-        out_channels : number of output channels.
-        stride : number of stride for convolutions.
-        """
         super().__init__()
 
         self._in_channels = in_channels

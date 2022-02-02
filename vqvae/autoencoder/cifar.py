@@ -12,14 +12,13 @@ class CifarAutoEncoder(nn.Module):
     In the following documentation, we will use the following variable names:
     `B`: batch size.
     `D`: number of channels of the feature map.
+
+    Parameters
+    ----------
+    out_channels: number of channels of the feature map.
     """
 
     def __init__(self, out_channels):
-        """
-        Parameters
-        ----------
-        out_channels: number of channels of the feature map.
-        """
         super().__init__()
 
         self.encode = nn.Sequential(
