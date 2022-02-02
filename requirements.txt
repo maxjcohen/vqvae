@@ -3,3 +3,4 @@ pytorch_lightning
 matplotlib
 tqdm
 aim
+plotly
