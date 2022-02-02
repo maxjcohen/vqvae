@@ -13,62 +13,94 @@ from src.trainer.cifar import LitCifarTrainer
 from ..utils import parser, get_logger
 
 
-exp_name = "vqvae-cifar-ema"
+class CifarDataModule(pl.LightningDataModule):
+    def __init__(self, dataset_path: Path, batch_size: int, num_workers: int = 2):
+        super().__init__()
+        self._dataset_path = dataset_path
+        self._batch_size = batch_size
+        self._num_workers = num_workers
 
-# Load model
-dim_codebook = 32
-num_codebook = 256
-model = CifarVQVAE(
-    num_codebook=num_codebook,
-    dim_codebook=dim_codebook,
-)
+    def setup(self, stage=None):
+        self.dataset_train = datasets.CIFAR10(
+            self._dataset_path,
+            train=True,
+            download=True,
+            transform=transforms.ToTensor(),
+        )
+        self.dataset_val = datasets.CIFAR10(
+            self._dataset_path,
+            train=False,
+            download=True,
+            transform=transforms.ToTensor(),
+        )
 
+    def train_dataloader(self):
+        return DataLoader(
+            self.dataset_train,
+            batch_size=self._batch_size,
+            num_workers=self._num_workers,
+            shuffle=True,
+            collate_fn=self._collate_fn,
+        )
 
-def get_dataloader(args, split="train"):
-    train = split == "train"
+    def val_dataloader(self):
+        return DataLoader(
+            self.dataset_val,
+            batch_size=self._batch_size,
+            num_workers=self._num_workers,
+            shuffle=False,
+            collate_fn=self._collate_fn,
+        )
 
-    def collate_fn(batch):
+    @staticmethod
+    def _collate_fn(batch):
         return torch.stack([images for images, label in batch])
 
-    dataset = datasets.CIFAR10(
-        "./datasets/CIFAR10",
-        train=train,
-        download=True,
-        transform=transforms.ToTensor(),
-    )
-    return DataLoader(
-        dataset=dataset,
-        batch_size=args.batch_size,
-        shuffle=train,
-        num_workers=args.num_workers,
-        collate_fn=collate_fn,
-    )
+
+class Experiment:
+    exp_name = "vqvae-cifar"
+    dim_codebook = 32
+    num_codebook = 256
+    dataset_path = "./datasets/CIFAR10"
+    lr = 3e-4
+
+    def __init__(self, args):
+        args.lr = args.lr or self.lr
+
+        # Load dataset
+        self.datamodule = CifarDataModule(
+            dataset_path=self.dataset_path,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+        )
+
+        # Load LitModule
+        model = CifarVQVAE(
+            num_codebook=self.num_codebook,
+            dim_codebook=self.dim_codebook,
+        )
+        self.litmodule = LitCifarTrainer(model, lr=args.lr)
+
+        # Load trainer
+        self.logger = get_logger(self.exp_name)
+        self.logger.experiment["hparams"] = vars(args)
+        checkpoint_callback = ModelCheckpoint(
+            dirpath=Path("checkpoints") / self.exp_name,
+            filename=f"{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}",
+            monitor="val_reconstruction_loss",
+            save_last=True,
+        )
+        self.trainer = pl.Trainer(
+            max_epochs=args.epochs,
+            gpus=args.gpus,
+            logger=self.logger,
+            callbacks=[checkpoint_callback],
+        )
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    args.lr = args.lr or 1e-3
-    litmodule = LitCifarTrainer(model, lr=args.lr)
-    # Load logger
-    logger = get_logger(exp_name)
-    logger.experiment["hparams"] = vars(args)
-    # Define checkpoints
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=Path("checkpoints") / exp_name,
-        filename=f"{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}",
-        monitor="val_reconstruction_loss",
-    )
-    trainer = pl.Trainer(
-        max_epochs=args.epochs,
-        gpus=args.gpus,
-        logger=logger,
-        callbacks=[checkpoint_callback],
-    )
+    exp = Experiment(args)
 
-    # Load dataset
-    dataloader_train = get_dataloader(args, split="train")
-    dataloader_val = get_dataloader(args, split="val")
-
-    trainer.fit(litmodule, dataloader_train, val_dataloaders=dataloader_val)
-    # Save model weights
-    torch.save(model.state_dict(), "model.pt")
+    # Train
+    exp.trainer.fit(exp.litmodule, datamodule=exp.datamodule)

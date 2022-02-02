@@ -12,52 +12,52 @@ from oze.datamodule import OzeDataModule
 from ..utils import parser, get_logger
 
 
-exp_name = "oze-ozedata"
+class Experiment:
+    exp_name = "oze-ozedata"
+    dim_codebook = 32
+    num_codebook = 256
+    dataset_path = "datasets/oze/data_2020_2021.csv"
+    lr = 1e-3
+    T = 24 * 7
 
-# Load model
-dim_codebook = 32
-num_codebook = 256
-model = OzeVQVAE(
-    num_codebook=num_codebook,
-    dim_codebook=dim_codebook,
-)
+    def __init__(self, args):
+        args.lr = args.lr or self.lr
 
+        # Load dataset
+        self.datamodule = OzeDataModule(
+            dataset_path=self.dataset_path,
+            T=self.T,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+        )
 
-def get_datamodule(args):
-    return OzeDataModule(
-        dataset_path="datasets/oze/data_2020_2021.csv",
-        T=24*7,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-    )
+        # Load LitModule
+        model = OzeVQVAE(
+            num_codebook=self.num_codebook,
+            dim_codebook=self.dim_codebook,
+        )
+        self.litmodule = LitOzeTrainer(model, lr=args.lr)
+
+        # Load trainer
+        self.logger = get_logger(self.exp_name)
+        self.logger.experiment["hparams"] = vars(args)
+        checkpoint_callback = ModelCheckpoint(
+            dirpath=Path("checkpoints") / self.exp_name,
+            filename=f"{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}",
+            monitor="val_reconstruction_loss",
+            save_last=True,
+        )
+        self.trainer = pl.Trainer(
+            max_epochs=args.epochs,
+            gpus=args.gpus,
+            logger=self.logger,
+            callbacks=[checkpoint_callback],
+        )
+
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    args.lr = args.lr or 1e-3
-    litmodule = LitOzeTrainer(model, lr=args.lr)
-
-    # Load logger
-    logger = get_logger(exp_name)
-    logger.experiment["hparams"] = vars(args)
-
-    # Define checkpoints
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=Path("checkpoints") / exp_name,
-        filename=f"{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}",
-        monitor="val_reconstruction_loss",
-        save_last=True,
-    )
-
-    # Load trainer
-    trainer = pl.Trainer(
-        max_epochs=args.epochs,
-        gpus=args.gpus,
-        logger=logger,
-        callbacks=[checkpoint_callback],
-    )
-
-    # Load dataset
-    datamodule = get_datamodule(args)
+    exp = Experiment(args)
 
     # Train
-    trainer.fit(litmodule, datamodule=datamodule)
+    exp.trainer.fit(exp.litmodule, datamodule=exp.datamodule)

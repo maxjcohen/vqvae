@@ -4,3 +4,4 @@ matplotlib
 tqdm
 aim
 plotly
+h5py
