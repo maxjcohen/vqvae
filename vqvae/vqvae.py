@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from .codebook import Codebook, EMACodebook
-from .autoencoder import CifarAutoEncoder, OzeBackbone
+from .backbone import CifarAutoEncoder, OzeBackbone
 
 
 class CifarVQVAE(nn.Module):
