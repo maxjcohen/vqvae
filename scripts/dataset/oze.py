@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from vqvae.vqvae import OzeVQVAE
 
 from src.trainer.oze import LitOzeTrainer
-from oze.datamodule import OzeDataModule
+from src.oze.datamodule import OzeDataModule
 from ..utils import parser, get_logger
 
 
