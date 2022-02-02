@@ -21,7 +21,7 @@ def flatten_ts_batch(batch):
     return torch.cat([sample for sample in batch.transpose(0, 1)], dim=0)
 
 
-class OzeTrainer(pl.LightningModule):
+class LitOzeTrainer(pl.LightningModule):
     def __init__(self, model, lr=1e-3):
         super().__init__()
         self.lr = lr

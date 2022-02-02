@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from vqvae.vqvae import OzeVQVAE
 
-from src.trainers.oze import OzeTrainer
+from src.trainer.oze import LitOzeTrainer
 from oze.datamodule import OzeDataModule
 from ..utils import parser, get_logger
 
@@ -34,7 +34,7 @@ def get_datamodule(args):
 if __name__ == "__main__":
     args = parser.parse_args()
     args.lr = args.lr or 1e-3
-    litmodule = OzeTrainer(model, lr=args.lr)
+    litmodule = LitOzeTrainer(model, lr=args.lr)
 
     # Load logger
     logger = get_logger(exp_name)

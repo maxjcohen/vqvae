@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from vqvae import VQVAE
 
-from src.trainers.cifar import LITVqvae
+from src.trainer.cifar import LitCifarTrainer
 from src.dataset import MiniImagenet
 from ..utils import parser, get_logger
 
@@ -28,7 +28,7 @@ model = VQVAE(
     channel_sizes=channel_sizes,
     strides=strides,
 )
-litmodule = LITVqvae(model, lr=3e-4)
+litmodule = LitCifarTrainer(model, lr=3e-4)
 
 
 def get_dataloader(args, split="train"):

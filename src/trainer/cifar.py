@@ -14,7 +14,7 @@ def image_compare_reconstructions(originals, reconstructions):
     )
 
 
-class LITVqvae(pl.LightningModule):
+class LitCifarTrainer(pl.LightningModule):
     def __init__(self, model, lr=1e-3):
         super().__init__()
         self.lr = lr

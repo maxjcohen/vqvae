@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from vqvae import CifarVQVAE
 
-from src.trainers.cifar import LITVqvae
+from src.trainer.cifar import LitCifarTrainer
 from ..utils import parser, get_logger
 
 
@@ -48,7 +48,7 @@ def get_dataloader(args, split="train"):
 if __name__ == "__main__":
     args = parser.parse_args()
     args.lr = args.lr or 1e-3
-    litmodule = LITVqvae(model, lr=args.lr)
+    litmodule = LitCifarTrainer(model, lr=args.lr)
     # Load logger
     logger = get_logger(exp_name)
     logger.experiment["hparams"] = vars(args)
