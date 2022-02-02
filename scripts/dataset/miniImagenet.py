@@ -7,8 +7,8 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from vqvae import VQVAE
-from vqvae.trainer import LITVqvae
 
+from src.trainers.cifar import LITVqvae
 from src.dataset import MiniImagenet
 from ..utils import parser, get_logger
 

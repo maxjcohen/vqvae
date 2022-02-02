@@ -1,6 +1,17 @@
 import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from aim import Image
+
+
+def image_compare_reconstructions(originals, reconstructions):
+    return torch.cat(
+        [
+            torch.cat([original, reconstruction], dim=1)
+            for original, reconstruction in zip(originals, reconstructions)
+        ],
+        dim=2,
+    )
 
 
 class LITVqvae(pl.LightningModule):
@@ -29,6 +40,13 @@ class LITVqvae(pl.LightningModule):
         reconstructions = self.model(images)
         reconstruction_loss = F.mse_loss(reconstructions, images)
         self.log("val_reconstruction_loss", reconstruction_loss)
+        if batch_idx == 0:
+            self.logger.experiment.track(
+                Image(image_compare_reconstructions(images, reconstructions)),
+                name="comparison",
+                epoch=self.current_epoch,
+                context={"subset": "val"},
+            )
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), self.lr)

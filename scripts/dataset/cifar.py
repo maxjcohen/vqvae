@@ -8,8 +8,8 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from vqvae import CifarVQVAE
-from vqvae.trainer import LITVqvae
 
+from src.trainers.cifar import LITVqvae
 from ..utils import parser, get_logger
 
 
