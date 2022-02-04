@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import RelaxedOneHotCategorical
 
 
 class Codebook(torch.nn.Embedding):
@@ -133,3 +134,68 @@ class EMACodebook(Codebook):
             self.weight.data = self.ema_positions / self.ema_cluster_size.unsqueeze(-1)
         quantized = self.codebook_lookup(indices).view(original_shape)
         return quantized.detach()
+
+
+class GumbelCodebook(Codebook):
+    """VQ-VAE Codebook with Gumbel Sotmax Reparametrization.
+
+    Parameters
+    ----------
+    num_codebook: number of codebooks.
+    dim_codebook: dimension of codebooks.
+    tau: temperature for the Gumbel Softmax distribution. Default is `0.5`.
+    hard: if `True`, will use hard discretization and forward the gradient directly.
+    Default is `False`.
+    """
+
+    def __init__(
+        self,
+        num_codebook: int,
+        dim_codebook: int,
+        tau: float = 0.5,
+        hard: bool = False,
+        **kwargs
+    ):
+        super().__init__(num_codebook=num_codebook, dim_codebook=dim_codebook, **kwargs)
+        self.tau = tau
+        self.hard = hard
+
+    def quantize(self, encoding: torch.Tensor) -> torch.Tensor:
+        """Quantize the encoded vector using Gumbel Softmax.
+
+        During training, we sample indices from a relaxed onehot categorical
+        distribution based on the distances, instead of taking the argmin of the
+        distances. During inference, we fall back to hard Gumbel Softmax: indices are
+        first sampled just as during the training, then quantized by computing their
+        argmin, which is used to select codebooks.
+
+        Note
+        ----
+        During training, quantized vector are a linear combination of the codebooks ;
+        during inference, they match a single codebook. This codebook is not necessary
+        the closest, as we are first sampling from a Gumbel Softmax.
+
+        Note
+        ----
+        Training or inference state is based on the value of `self.training`.
+
+        Parameters
+        ----------
+        encoding: encoding vector to quantize.
+        KL: Only during training. The KL divergence is derived from the ELBO.
+        """
+        distances = self.compute_distances(encoding)
+        gumbel_softmax = RelaxedOneHotCategorical(
+            temperature=self.tau, probs=-distances
+        )
+        indices_soft = gumbel_softmax.rsample()
+        if self.hard or not self.training:
+            indices = torch.argmax(indices_soft, dim=-1)
+            quantized = self.codebook_lookup(indices)
+            return quantized
+        else:
+            quantized = indices_soft @ self.weight
+            kl = gumbel_softmax.probs * torch.log(
+                gumbel_softmax.probs * self.num_codebook + 1e-10
+            )
+            return quantized, kl.mean()
