@@ -119,7 +119,7 @@ class EMACodebook(Codebook):
         distances = self.compute_distances(encoding)
         indices = torch.argmin(distances, dim=-1)
         indices_onehot = F.one_hot(indices, num_classes=self.num_codebook)
-        if self.train:
+        if self.training:
             # Update cluster size
             instant_cluster_size = indices_onehot.sum(dim=0)
             self.ema_cluster_size = (
