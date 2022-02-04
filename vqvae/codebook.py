@@ -21,7 +21,8 @@ class Codebook(torch.nn.Embedding):
     num_codebook: number of codebooks.
     dim_codebook: dimension of codebooks.
     """
-    def __init__(self, num_codebook:int, dim_codebook:int, **kwargs):
+
+    def __init__(self, num_codebook: int, dim_codebook: int, **kwargs):
         super().__init__(num_embeddings=num_codebook, embedding_dim=dim_codebook)
         self.weight.data.uniform_(-1 / num_codebook, 1 / num_codebook)
 
@@ -98,7 +99,15 @@ class EMACodebook(Codebook):
     gamma: degree of weighting decrease. Must be between `0` and `1`. Default is `0.99`.
     epsilon: pseudocount for the Laplace smoothing. Default is `1e-5`.
     """
-    def __init__(self, num_codebook:int, dim_codebook:int, gamma:float=0.99, epsilon:float=1e-5, **kwargs):
+
+    def __init__(
+        self,
+        num_codebook: int,
+        dim_codebook: int,
+        gamma: float = 0.99,
+        epsilon: float = 1e-5,
+        **kwargs
+    ):
         super().__init__(num_codebook=num_codebook, dim_codebook=dim_codebook, **kwargs)
         self.gamma = gamma
         self.epsilon = epsilon
@@ -111,7 +120,7 @@ class EMACodebook(Codebook):
         distances = self.compute_distances(encoding)
         indices = torch.argmin(distances, dim=-1)
         indices_onehot = F.one_hot(indices, num_classes=self.num_codebook)
-        if self.train:
+        if self.training:
             # Update cluster size
             instant_cluster_size = indices_onehot.sum(dim=0)
             self.ema_cluster_size = (
