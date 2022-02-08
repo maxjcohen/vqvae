@@ -31,7 +31,7 @@ if __name__ == "__main__":
     exp = Experiment(args)
 
     litmodule = LitExport.load_from_checkpoint(
-        "checkpoints/oze-vqvae/2022_02_08__101152.ckpt",
+        "checkpoints/oze-vqvae/current.ckpt",
         model=exp.litmodule.model,
         export_path=args.exportpath,
     )
