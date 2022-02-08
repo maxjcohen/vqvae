@@ -119,9 +119,8 @@ class EMACodebook(Codebook):
         self.register_buffer("ema_positions", self.weight.clone())
 
     def quantize(self, encoding: torch.Tensor) -> torch.Tensor:
-        original_shape = encoding.shape
-        encoding = encoding.reshape(-1, self.dim_codebook)
-        distances = self.compute_distances(encoding)
+        encoding_flatten = encoding.reshape(-1, self.dim_codebook)
+        distances = self.compute_distances(encoding_flatten)
         indices = torch.argmin(distances, dim=-1)
         indices_onehot = F.one_hot(indices, num_classes=self.num_codebook)
         probs = indices_onehot.float().mean(dim=0)
@@ -142,11 +141,11 @@ class EMACodebook(Codebook):
                 * total_cluster_size
             )
             # Update positions
-            instant_positions = indices_onehot.T.to(dtype=torch.float32) @ encoding
+            instant_positions = indices_onehot.T.float() @ encoding_flatten
             self.ema_positions = (
                 self.gamma * self.ema_positions + (1 - self.gamma) * instant_positions
             )
             # Update codebook
             self.weight.data = self.ema_positions / self.ema_cluster_size.unsqueeze(-1)
-        quantized = self.codebook_lookup(indices).view(original_shape)
+        quantized = self.codebook_lookup(indices).view(encoding.shape)
         return quantized.detach()
