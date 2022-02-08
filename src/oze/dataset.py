@@ -43,7 +43,7 @@ class OzeDataset(Dataset):
         # Add occupancy
         df["occupancy"] = df["datetime"].apply(compute_occupancy)
         # Flag validation for 2021 data, starts on first monday
-        df["val"] = df["datetime"] > datetime.datetime(year=2021, month=1, day=4)
+        df["val"] = df["datetime"] > datetime.datetime(year=2021, month=10, day=1)
 
     def normalize(self, array, label=None):
         array_mean = array.mean(axis=0, keepdims=True)
