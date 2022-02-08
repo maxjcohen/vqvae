@@ -41,7 +41,7 @@ class CifarVQVAE(nn.Module):
         encoding = self.encode(x)
         # Switch to channel last
         encoding = encoding.permute(0, 2, 3, 1)
-        quantized = self.codebook.quantize(encoding)
+        quantized, _ = self.codebook.quantize(encoding)
         # Switch to channel first
         quantized = quantized.permute(0, 3, 1, 2)
         return self.decode(quantized)
@@ -81,5 +81,5 @@ class OzeVQVAE(nn.Module):
         Decoded representation with shape `(T, B, 1)`.
         """
         encoding = self.encode(x)
-        quantized = self.codebook.quantize(encoding)
+        quantized, _ = self.codebook.quantize(encoding)
         return self.decode(quantized)

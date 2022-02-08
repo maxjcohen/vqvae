@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,12 +26,15 @@ class Codebook(torch.nn.Embedding):
     def __init__(self, num_codebook: int, dim_codebook: int, **kwargs):
         super().__init__(num_embeddings=num_codebook, embedding_dim=dim_codebook)
         self.weight.data.uniform_(-1 / num_codebook, 1 / num_codebook)
+        self._eps = torch.finfo(torch.float32).eps
 
-    def quantize(self, encoding: torch.Tensor) -> torch.Tensor:
+    def quantize(self, encoding: torch.Tensor) -> Tuple[torch.Tensor, dict]:
         """Quantize an encoding vector with respect to the codebook.
 
         Compute the distances between the encoding and the codebook vectors, and assign
-        the closest codebook to each point in the feature map.
+        the closest codebook to each point in the feature map. The gradient from the
+        return quantized tensor is copied to the encoding. This function also returns
+        the latent loss and the normalized perplexity.
 
         Parameters
         ----------
@@ -37,12 +42,23 @@ class Codebook(torch.nn.Embedding):
 
         Returns
         -------
-        Quantized tensor with the same shape as the input vector.
+        quantized: quantized tensor with the same shape as the input vector.
+        losses: dictionary containing the latent loss between encodings and selected
+        codebooks, and the normalized perplexity.
         """
         distances = self.compute_distances(encoding)
         indices = torch.argmin(distances, dim=-1)
         quantized = self.codebook_lookup(indices)
-        return quantized
+        loss_latent = F.mse_loss(encoding, quantized)
+        quantized = encoding + (quantized - encoding).detach()
+        # Compute perplexity
+        probs = F.one_hot(indices, num_classes=self.num_codebook).float().mean(dim=0)
+        perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
+        perplexity = perplexity / self.num_codebook
+        return quantized, {
+            "loss_latent": loss_latent,
+            "perplexity": perplexity,
+        }
 
     def compute_distances(self, encodings: torch.Tensor) -> torch.Tensor:
         """Compute distance between encodings and codebooks.
@@ -86,11 +102,6 @@ class EMACodebook(Codebook):
     This modules is similar to the `Codebook` module, with the addition of updating
     codebook positions with EMA.
 
-    Note
-    ----
-    Because codebooks are updated directly with EMA, quantized vector do not hold any
-    gradient.
-
     Parameters
     ----------
     num_codebook: number of codebooks.
@@ -113,12 +124,31 @@ class EMACodebook(Codebook):
         self.register_buffer("ema_cluster_size", torch.zeros(self.num_codebook))
         self.register_buffer("ema_positions", self.weight.clone())
 
-    def quantize(self, encoding: torch.Tensor) -> torch.Tensor:
-        original_shape = encoding.shape
-        encoding = encoding.reshape(-1, self.dim_codebook)
-        distances = self.compute_distances(encoding)
+    def quantize(self, encoding: torch.Tensor) -> Tuple[torch.Tensor, dict]:
+        """Quantize an encoding vector with respect to the codebook.
+
+        Note
+        ----
+        Because codebooks are updated using EMA, the latent loss does not back propagate
+        gradient toward the codebooks.
+
+        Parameters
+        ----------
+        encoding: input tensor with shape `(*, D)`.
+
+        Returns
+        -------
+        quantized: quantized tensor with the same shape as the input vector.
+        losses: dictionary containing the latent loss between encodings and selected
+        codebooks, and the normalized perplexity.
+        """
+        encoding_flatten = encoding.reshape(-1, self.dim_codebook)
+        distances = self.compute_distances(encoding_flatten)
         indices = torch.argmin(distances, dim=-1)
         indices_onehot = F.one_hot(indices, num_classes=self.num_codebook)
+        probs = indices_onehot.float().mean(dim=0)
+        perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
+        perplexity = perplexity / self.num_codebook
         if self.training:
             # Update cluster size
             instant_cluster_size = indices_onehot.sum(dim=0)
@@ -134,11 +164,16 @@ class EMACodebook(Codebook):
                 * total_cluster_size
             )
             # Update positions
-            instant_positions = indices_onehot.T.to(dtype=torch.float32) @ encoding
+            instant_positions = indices_onehot.T.float() @ encoding_flatten
             self.ema_positions = (
                 self.gamma * self.ema_positions + (1 - self.gamma) * instant_positions
             )
             # Update codebook
             self.weight.data = self.ema_positions / self.ema_cluster_size.unsqueeze(-1)
-        quantized = self.codebook_lookup(indices).view(original_shape)
-        return quantized.detach()
+        quantized = self.codebook_lookup(indices).view(encoding.shape)
+        loss_latent = F.mse_loss(encoding, quantized)
+        quantized = encoding + (quantized - encoding).detach()
+        return quantized, {
+            "loss_latent": loss_latent,
+            "perplexity": perplexity,
+        }

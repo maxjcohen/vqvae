@@ -25,15 +25,15 @@ class LitCifarTrainer(pl.LightningModule):
         encoding = self.model.encode(images)
         # Switch to channel last
         encoding = encoding.permute(0, 2, 3, 1)
-        quantized = self.model.codebook.quantize(encoding)
-        loss_latent = F.mse_loss(encoding, quantized)
-        quantized = encoding + (quantized - encoding).detach()
+        quantized, codebook_metrics = self.model.codebook.quantize(encoding)
         # Switch to channel first
         quantized = quantized.permute(0, 3, 1, 2)
         reconstructions = self.model.decode(quantized)
-        loss = self.loss(reconstructions, images)
-        loss = loss + loss_latent
+        loss = self.loss(reconstructions, images) + codebook_metrics["loss_latent"]
         self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log(
+            "perplexity", codebook_metrics["perplexity"], on_step=False, on_epoch=True
+        )
         return loss
 
     def validation_step(self, images, batch_idx):

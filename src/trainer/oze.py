@@ -30,12 +30,13 @@ class LitOzeTrainer(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         u, y = batch
         encoding = self.model.encode(y)
-        quantized = self.model.codebook.quantize(encoding)
-        loss_latent = F.mse_loss(encoding, quantized)
-        quantized = encoding + (quantized - encoding).detach()
+        quantized, codebook_metrics = self.model.codebook.quantize(encoding)
         reconstructions = self.model.decode(quantized)
-        loss = F.mse_loss(reconstructions, y) + loss_latent
+        loss = F.mse_loss(reconstructions, y) + codebook_metrics["loss_latent"]
         self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log(
+            "perplexity", codebook_metrics["perplexity"], on_step=False, on_epoch=True
+        )
         return loss
 
     def validation_step(self, batch, batch_idx):
