@@ -43,6 +43,15 @@ class OzeDataModule(pl.LightningDataModule):
             collate_fn=self._collate_fn,
         )
 
+    def export_dataloader(self):
+        return DataLoader(
+            self.dataset_train,
+            batch_size=self._batch_size,
+            num_workers=self._num_workers,
+            shuffle=False,
+            collate_fn=self._collate_fn,
+        )
+
     @staticmethod
     def _collate_fn(batch):
         u, y = list(zip(*batch))
