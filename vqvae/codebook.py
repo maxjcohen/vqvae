@@ -24,6 +24,7 @@ class Codebook(torch.nn.Embedding):
     def __init__(self, num_codebook: int, dim_codebook: int, **kwargs):
         super().__init__(num_embeddings=num_codebook, embedding_dim=dim_codebook)
         self.weight.data.uniform_(-1 / num_codebook, 1 / num_codebook)
+        self._eps = torch.finfo(torch.float32).eps
 
     def quantize(self, encoding: torch.Tensor) -> torch.Tensor:
         """Quantize an encoding vector with respect to the codebook.
@@ -42,6 +43,10 @@ class Codebook(torch.nn.Embedding):
         distances = self.compute_distances(encoding)
         indices = torch.argmin(distances, dim=-1)
         quantized = self.codebook_lookup(indices)
+        # Compute perplexity
+        probs = F.one_hot(indices, num_classes=self.num_codebook).float().mean(dim=0)
+        perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
+        perplexity = perplexity / self.num_codebook
         return quantized
 
     def compute_distances(self, encodings: torch.Tensor) -> torch.Tensor:
@@ -119,6 +124,9 @@ class EMACodebook(Codebook):
         distances = self.compute_distances(encoding)
         indices = torch.argmin(distances, dim=-1)
         indices_onehot = F.one_hot(indices, num_classes=self.num_codebook)
+        probs = indices_onehot.float().mean(dim=0)
+        perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
+        perplexity = perplexity / self.num_codebook
         if self.training:
             # Update cluster size
             instant_cluster_size = indices_onehot.sum(dim=0)
