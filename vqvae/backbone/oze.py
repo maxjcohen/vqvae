@@ -16,7 +16,7 @@ class OzeBackbone(nn.Module):
     latent_dim: number of channels of the feature map.
     """
 
-    _input_dim = 2
+    _input_dim = 1
     _output_dim = 1
     _num_layers = 2
 

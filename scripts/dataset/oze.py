@@ -13,9 +13,9 @@ from ..utils import parser, get_logger
 
 
 class Experiment:
-    exp_name = "oze-ozedata"
-    dim_codebook = 32
-    num_codebook = 256
+    exp_name = "oze-vqvae"
+    dim_codebook = 16
+    num_codebook = 8
     dataset_path = "datasets/oze/data_2020_2021.csv"
     lr = 1e-3
     T = 24 * 7
