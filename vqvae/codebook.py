@@ -3,6 +3,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import RelaxedOneHotCategorical
 
 
 class Codebook(torch.nn.Embedding):
@@ -177,3 +178,48 @@ class EMACodebook(Codebook):
             "loss_latent": loss_latent,
             "perplexity": perplexity,
         }
+
+
+class GumbelCodebook(Codebook):
+    """VQ-VAE Codebook with Gumbel Sotmax Reparametrization.
+
+    Parameters
+    ----------
+    num_codebook: number of codebooks.
+    dim_codebook: dimension of codebooks.
+    tau: temperature for the Gumbel Softmax distribution. Default is `0.5`.
+    """
+
+    def __init__(self, num_codebook: int, dim_codebook: int, tau: float = 0.5):
+        super().__init__(num_codebook=num_codebook, dim_codebook=dim_codebook)
+        self.tau = tau
+
+    def quantize(self, encoding: torch.Tensor) -> Tuple[torch.Tensor, dict]:
+        """Quantize the encoded vector using Gumbel Softmax.
+
+        This function implements the "hard" flavor of the Gumbel Softmax: indices are
+        first sampled from a relaxed onehot categorical distribution, then quantized by
+        computing their argmax, which is used to select codebooks.
+
+        Returns
+        -------
+        quantized: quantized tensor with the same shape as the input vector.
+        losses: dictionary containing the latent loss between encodings and selected
+        codebooks, and the normalized perplexity.
+        """
+        distances = self.compute_distances(encoding)
+        gumbel_softmax = RelaxedOneHotCategorical(
+            temperature=self.tau, probs=-distances
+        )
+        # Sample from hard Gumbel Softmax
+        indices = torch.argmax(gumbel_softmax.sample(), dim=-1)
+        quantized = self.codebook_lookup(indices)
+        quantized = encoding + (quantized - encoding).detach()
+        kl = gumbel_softmax.probs * torch.log(
+            gumbel_softmax.probs * self.num_codebook + 1e-10
+        )
+        # Compute perplexity
+        probs = F.one_hot(indices, num_classes=self.num_codebook).float().mean(dim=0)
+        perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
+        perplexity = perplexity / self.num_codebook
+        return quantized, {"loss_latent": kl.mean(), "perplexity": perplexity}
