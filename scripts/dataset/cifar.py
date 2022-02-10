@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 from vqvae import CifarVQVAE
 
-from src.trainer.cifar import LitCifarTrainer, LitGumbelCifarTrainer
+from src.trainer.cifar import LitCifarTrainer
 from ..utils import parser, get_logger
 
 
@@ -80,7 +80,7 @@ class Experiment:
             dim_codebook=self.dim_codebook,
             codebook_flavor="gumbel",
         )
-        self.litmodule = LitGumbelCifarTrainer(model, lr=args.lr)
+        self.litmodule = LitCifarTrainer(model, lr=args.lr)
 
         # Load trainer
         self.logger = get_logger(self.exp_name)

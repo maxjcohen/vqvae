@@ -50,18 +50,3 @@ class LitCifarTrainer(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), self.lr)
-
-
-class LitGumbelCifarTrainer(LitCifarTrainer):
-    def training_step(self, images, batch_idx):
-        encoding = self.model.encode(images)
-        # Switch to channel last
-        encoding = encoding.permute(0, 2, 3, 1)
-        quantized, kl = self.model.codebook.quantize(encoding)
-        # Switch to channel first
-        quantized = quantized.permute(0, 3, 1, 2)
-        reconstructions = self.model.decode(quantized)
-        loss = self.loss(reconstructions, images)
-        loss = loss + kl
-        self.log("train_loss", loss, on_step=False, on_epoch=True)
-        return loss
