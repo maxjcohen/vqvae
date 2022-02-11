@@ -58,7 +58,12 @@ class Codebook(torch.nn.Embedding):
         loss_latent = F.mse_loss(encoding, quantized)
         quantized = encoding + (quantized - encoding).detach()
         # Compute perplexity
-        probs = F.one_hot(indices, num_classes=self.num_codebook).float().mean(dim=0)
+        probs = (
+            F.one_hot(indices, num_classes=self.num_codebook)
+            .view(-1, self.num_codebook)
+            .float()
+            .mean(dim=0)
+        )
         perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
         perplexity = perplexity / self.num_codebook
         return quantized, {
