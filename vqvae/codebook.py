@@ -72,7 +72,7 @@ class Codebook(torch.nn.Embedding):
         -------
         Distances with shape `(*, K)`.
         """
-        distances = (encodings.unsqueeze(-2) - self.weight).square().mean(-1)
+        distances = (encodings.unsqueeze(-2) - self.weight).square().sum(-1)
         return distances
 
     def codebook_lookup(self, indices: torch.Tensor) -> torch.Tensor:
@@ -197,9 +197,16 @@ class GumbelCodebook(Codebook):
     def quantize(self, encoding: torch.Tensor) -> Tuple[torch.Tensor, dict]:
         """Quantize the encoded vector using Gumbel Softmax.
 
-        This function implements the "hard" flavor of the Gumbel Softmax: indices are
-        first sampled from a relaxed onehot categorical distribution, then quantized by
-        computing their argmax, which is used to select codebooks.
+        Implements a quantization based on the distribution:
+        ..math
+            q_\varphi(z_q = e_k | z_e) = \frac{\exp{ - \| z_e - e_k \|^2 }}
+            {\sum_{l=1}^K \exp { - \| z_e - e_l \|^2 }}
+            \quad \forall 1 \leq k \leq K
+
+        Note
+        ----
+        During training, we sample instead from the associated Gumbel Softmax
+        distribution in order to allow gradient propagation.
 
         Returns
         -------
@@ -207,19 +214,24 @@ class GumbelCodebook(Codebook):
         losses: dictionary containing the latent loss between encodings and selected
         codebooks, and the normalized perplexity.
         """
-        distances = self.compute_distances(encoding)
+        encoding_flatten = encoding.reshape(-1, self.dim_codebook)
+        distances = self.compute_distances(encoding_flatten)
         gumbel_softmax = RelaxedOneHotCategorical(
-            temperature=self.tau, probs=-distances
+            logits=-distances, temperature=self.tau
         )
-        # Sample from hard Gumbel Softmax
-        indices = torch.argmax(gumbel_softmax.sample(), dim=-1)
-        quantized = self.codebook_lookup(indices)
-        quantized = encoding + (quantized - encoding).detach()
+        indices = gumbel_softmax.rsample()
+        if self.training:
+            quantized = indices @ self.weight
+        else:
+            quantized = self.codebook_lookup(indices.argmax(-1))
+        # KL divergence
         kl = gumbel_softmax.probs * torch.log(
-            gumbel_softmax.probs * self.num_codebook + 1e-10
+            gumbel_softmax.probs * self.num_codebook + self._eps
         )
+        kl = kl.sum(-1).mean()
         # Compute perplexity
-        probs = F.one_hot(indices, num_classes=self.num_codebook).float().mean(dim=0)
+        probs = indices.mean(dim=0)
         perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
         perplexity = perplexity / self.num_codebook
-        return quantized, {"loss_latent": kl.mean(), "perplexity": perplexity}
+        quantized = quantized.view(encoding.shape)
+        return quantized, {"loss_latent": kl, "perplexity": perplexity}
