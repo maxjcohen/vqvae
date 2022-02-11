@@ -10,8 +10,13 @@ class Codebook(torch.nn.Embedding):
     """VQ-VAE Codebook.
 
     Implements the algorithm presented in "Neural Discrete Representation Learning"
-    [https://arxiv.org/abs/1711.00937]. This module stores a finite set of codebooks,
-    used to compute quantization of input tensors.
+    [https://arxiv.org/abs/1711.00937], corresponding to the distribution:
+
+    ..math
+        q_\varphi(z_q = e_k | z_e) = \delta_k ( \argmin_{l=1}^K \| z_e - e_l \| )
+        \quad \forall 1 \leq k \leq K
+
+    This module stores a finite set of codebooks, used to compute quantization of input tensors.
 
     Note
     ----
