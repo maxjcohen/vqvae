@@ -103,5 +103,5 @@ class OzeVQVAE(nn.Module):
         Decoded representation with shape `(T, B, 1)`.
         """
         encoding = self.encode(x)
-        quantized, _ = self.codebook.quantize(encoding)
+        quantized, _, _ = self.codebook.quantize(encoding)
         return self.decode(quantized)
