@@ -51,7 +51,7 @@ class Experiment:
         checkpoint_callback = ModelCheckpoint(
             dirpath=Path("checkpoints") / self.exp_name,
             filename=f"{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}",
-            monitor="train_loss",
+            monitor="train_prior",
             save_last=True,
         )
         self.trainer = pl.Trainer(
