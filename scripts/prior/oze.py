@@ -29,19 +29,27 @@ class OzePrior(nn.Module):
     def forward(self, commands, indices, generate=False, step_sample=False):
         commands = self.input_embedding(commands)[0]
         indices_onehot = F.one_hot(indices, num_classes=self.num_codebook).float()
-        h_t = indices_onehot[0]
-        outputs = [h_t]
-        for command, indice in zip(commands[1:], indices_onehot[:-1]):
-            if generate:
+        if generate:
+            h_t = indices_onehot[0]
+            outputs = [h_t]
+            for command in commands:
+                h_t = self.kernel(command, h_t)
                 h_t = (
                     F.softmax(h_t, dim=-1).multinomial(1).squeeze()
                     if step_sample
                     else h_t.argmax(-1)
                 )
-                indice = F.one_hot(h_t, num_classes=self.num_codebook).float()
-            h_t = self.kernel(command, indice)
-            outputs.append(h_t)
-        return torch.stack(outputs, dim=0)
+                h_t = F.one_hot(h_t, num_classes=self.num_codebook).float()
+                outputs.append(h_t)
+            return torch.stack(outputs, dim=0)
+        outputs = torch.empty(indices_onehot.shape, device=indices_onehot.device)
+        outputs[0] = indices_onehot[0]
+        commands = commands[1:].view(-1, self.latent_dim)
+        indices_onehot = indices_onehot[:-1].view(-1, self.num_codebook)
+        outputs[1:] = self.kernel(commands, indices_onehot).view(
+            167, -1, self.num_codebook
+        )
+        return outputs
 
 
 class LitOzePrior(pl.LightningModule):
