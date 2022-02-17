@@ -23,7 +23,7 @@ class Experiment:
     dim_command = 2
     T = 24 * 7
     dataset_path = "datasets/oze/data_2020_2021.csv"
-    lr = 1e-2
+    lr = 1e-3
 
     def __init__(self, args):
         args.lr = args.lr or self.lr
