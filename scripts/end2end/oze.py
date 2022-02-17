@@ -91,7 +91,14 @@ class LitOzeFull(pl.LightningModule):
         # Addup losses
         loss = loss_reconstruction + loss_prior + codebook_metrics["loss_latent"]
         self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log("train_likelihood", loss_reconstruction, on_step=False, on_epoch=True)
         self.log("train_prior", loss_prior, on_step=False, on_epoch=True)
+        self.log(
+            "train_posterior",
+            codebook_metrics["loss_latent"],
+            on_step=False,
+            on_epoch=True,
+        )
         self.log(
             "perplexity", codebook_metrics["perplexity"], on_step=False, on_epoch=True
         )
