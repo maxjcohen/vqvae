@@ -230,19 +230,18 @@ class GumbelCodebook(Codebook):
             logits=-distances, temperature=self.tau
         )
         logits = gumbel_softmax.rsample()
+        indices = logits.argmax(-1)
         if self.training:
             quantized = logits @ self.weight
         else:
-            quantized = self.codebook_lookup(logits.argmax(-1))
-        # KL divergence
-        kl = gumbel_softmax.probs * torch.log(
-            gumbel_softmax.probs * self.num_codebook + self._eps
-        )
-        kl = kl.sum(-1).mean()
+            quantized = self.codebook_lookup(indices)
+        loss_latent = -F.cross_entropy(-distances, target=indices)
         # Compute perplexity
         probs = logits.mean(dim=0)
         perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
         perplexity = perplexity / self.num_codebook
-        quantized = quantized.view(encoding.shape)
-        indices = logits.argmax(-1).view(*encoding.shape[:-1]).detach()
-        return quantized, indices, {"loss_latent": kl, "perplexity": perplexity}
+        return (
+            quantized.view(encoding.shape),
+            indices.view(*encoding.shape[:-1]),
+            {"loss_latent": loss_latent, "perplexity": perplexity},
+        )
