@@ -32,7 +32,7 @@ class OzePrior(nn.Module):
         if generate:
             h_t = indices_onehot[0]
             outputs = [h_t]
-            for command in commands:
+            for command in commands[1:]:
                 h_t = self.kernel(command, h_t)
                 h_t = (
                     F.softmax(h_t, dim=-1).multinomial(1).squeeze()
