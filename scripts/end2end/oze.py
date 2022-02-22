@@ -23,7 +23,7 @@ class Experiment:
     dim_command = 2
     T = 24 * 7
     dataset_path = "datasets/oze/data_2020_2021.csv"
-    lr = 1e-3
+    lr = 3e-3
 
     def __init__(self, args):
         args.lr = args.lr or self.lr
@@ -77,38 +77,37 @@ class LitOzeFull(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         commands, observations = batch
-        # Sampling
+        # Encode observation
         encoding = self.vqvae.encode(observations)
-        quantized, indices, codebook_metrics = self.vqvae.codebook.quantize(encoding)
+        # Sample quantized vector
+        quantized, sample, codebook_metrics = self.vqvae.codebook.quantize(encoding)
+        loss_posterior = codebook_metrics["loss_latent"]
+        perplexity = codebook_metrics["perplexity"]
+        indices = sample.argmax(-1)
         # Likelihood
         reconstructions = self.vqvae.decode(quantized)
         loss_reconstruction = F.mse_loss(reconstructions, observations)
         # Prior
         predictions = self.prior.forward(commands, indices)
-        loss_prior = F.cross_entropy(
-            predictions.permute(1, 2, 0), indices.permute(1, 0)
-        )
+        log_probs = torch.log(F.softmax(predictions, dim=-1))
+        loss_prior = -torch.sum(sample * log_probs, dim=-1).mean()
+        # TODO Replace with same torch builtin as in codebook
         # Addup losses
-        loss = loss_reconstruction + loss_prior + codebook_metrics["loss_latent"]
+        loss = loss_reconstruction + loss_prior + loss_posterior
         self.log("train_loss", loss, on_step=False, on_epoch=True)
         self.log("train_likelihood", loss_reconstruction, on_step=False, on_epoch=True)
         self.log("train_prior", loss_prior, on_step=False, on_epoch=True)
-        self.log(
-            "train_posterior",
-            codebook_metrics["loss_latent"],
-            on_step=False,
-            on_epoch=True,
-        )
-        self.log(
-            "perplexity", codebook_metrics["perplexity"], on_step=False, on_epoch=True
-        )
+        self.log("train_posterior", loss_posterior, on_step=False, on_epoch=True)
+        self.log("train_perplexity", perplexity, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         commands, observations = batch
         # Encoding
         encoding = self.vqvae.encode(observations)
-        quantized, indices, _ = self.vqvae.codebook.quantize(encoding)
+        # Sample
+        quantized, sample, _ = self.vqvae.codebook.quantize(encoding)
+        indices = sample.argmax(-1)
         # Prior reconstruction
         prior_recons = self.prior.forward(commands, indices=indices)
         prior_recons = self.vqvae.decode(self.vqvae.codebook(prior_recons.argmax(-1)))

@@ -16,12 +16,13 @@ class Codebook(torch.nn.Embedding):
         q_\varphi(z_q = e_k | z_e) = \delta_k ( \argmin_{l=1}^K \| z_e - e_l \| )
         \quad \forall 1 \leq k \leq K
 
-    This module stores a finite set of codebooks, used to compute quantization of input tensors.
+    This module stores a finite set of codebooks, used to compute quantization of input
+    tensors.
 
     Note
     ----
-    This module inherits from the `torch.nn.Embedding` module, and uses its
-    forward implementation for the `codebook_lookup` function.
+    This module inherits from the `torch.nn.Embedding` module, and uses its forward
+    implementation for the `codebook_lookup` function.
 
     Parameters
     ----------
@@ -193,6 +194,17 @@ class EMACodebook(Codebook):
 class GumbelCodebook(Codebook):
     """VQ-VAE Codebook with Gumbel Sotmax Reparametrization.
 
+    Implements a quantization based on the distribution:
+    ..math
+        q_\varphi(z_q = e_k | z_e) = \frac{\exp{ - \| z_e - e_k \|^2 }}
+        {\sum_{l=1}^K \exp { - \| z_e - e_l \|^2 }}
+        \quad \forall 1 \leq k \leq K
+
+    Note
+    ----
+    During training, we sample instead from the associated Gumbel Softmax distribution
+    in order to allow gradient propagation.
+
     Parameters
     ----------
     num_codebook: number of codebooks.
@@ -204,44 +216,85 @@ class GumbelCodebook(Codebook):
         super().__init__(num_codebook=num_codebook, dim_codebook=dim_codebook)
         self.tau = tau
 
-    def quantize(self, encoding: torch.Tensor) -> Tuple[torch.Tensor, dict]:
+    def quantize(
+        self, encoding: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, dict]:
         """Quantize the encoded vector using Gumbel Softmax.
 
-        Implements a quantization based on the distribution:
-        ..math
-            q_\varphi(z_q = e_k | z_e) = \frac{\exp{ - \| z_e - e_k \|^2 }}
-            {\sum_{l=1}^K \exp { - \| z_e - e_l \|^2 }}
-            \quad \forall 1 \leq k \leq K
-
-        Note
-        ----
-        During training, we sample instead from the associated Gumbel Softmax
-        distribution in order to allow gradient propagation.
+        Parameters
+        ----------
+        encoding: encoding tensor with shape `(*, D)`.
 
         Returns
         -------
         quantized: quantized tensor with the same shape as the input vector.
+        sample: sampled soft indices with shape `(*, K)`.
         losses: dictionary containing the latent loss between encodings and selected
         codebooks, and the normalized perplexity.
         """
         encoding_flatten = encoding.reshape(-1, self.dim_codebook)
-        distances = self.compute_distances(encoding_flatten)
-        gumbel_softmax = RelaxedOneHotCategorical(
-            logits=-distances, temperature=self.tau
-        )
-        logits = gumbel_softmax.rsample()
-        indices = logits.argmax(-1)
-        if self.training:
-            quantized = logits @ self.weight
-        else:
-            quantized = self.codebook_lookup(indices)
-        loss_latent = -F.cross_entropy(-distances, target=indices)
-        # Compute perplexity
-        probs = logits.mean(dim=0)
-        perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
-        perplexity = perplexity / self.num_codebook
+        quantized, sample, logits = self.sample(encoding_flatten)
+        log_pdf = self.log_pdf(sample, logits)
+        perplexity = self.perplexity(sample)
         return (
             quantized.view(encoding.shape),
-            indices.view(*encoding.shape[:-1]),
-            {"loss_latent": loss_latent, "perplexity": perplexity},
+            sample.view(*encoding.shape[:-1], -1),
+            {"loss_latent": log_pdf, "perplexity": perplexity},
         )
+
+    def sample(
+        self, encoding: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Sample a quantized vector associated with an encoding.
+
+        During training, soft indices are sampled from a Gumbel Softmax distribution,
+        the resulting quantized vector is a linear combination of the codebooks. During
+        evaluation, the quantized vector is sampled as from a traditional Categorical
+        distribution.
+
+        Parameters
+        ----------
+        encoding: encoding tensor with shape `(B, D)`.
+
+        Returns
+        -------
+        quantized: quantized tensor with the same shape as the input vector.
+        sample: sampled soft indices with shape `(B, K)`.
+        logits: unnormalized log probabilities with shape `(B, K)`.
+        """
+        logits = -self.compute_distances(encoding)
+        gumbel_softmax = RelaxedOneHotCategorical(logits=logits, temperature=self.tau)
+        sample = gumbel_softmax.rsample()
+        if self.training:
+            quantized = sample @ self.weight
+        else:
+            quantized = self.codebook_lookup(sample.argmax(-1))
+        return quantized, sample, logits
+
+    def log_pdf(self, sample: torch.Tensor, logits: torch.Tensor) -> torch.float:
+        """Compute the log probability density function at the given sample.
+
+        TODO Add equation.
+
+        Parameters
+        ----------
+        sample: sample with shape `(B, K)`.
+        logits: unnormalized log probabilities with shape `(B, K)`.
+        """
+        # TODO Replace computation with torch builtin
+        log_probs = torch.log(F.softmax(logits, dim=-1))
+        log_probs = sample * log_probs
+        log_probs = log_probs.sum(-1).mean()
+        return log_probs
+
+    def perplexity(self, sample: torch.Tensor) -> torch.float:
+        """Compute the perplexity associated with the given sample.
+
+        Parameters
+        ----------
+        sample: sample with shape `(B, K)`.
+        """
+        probs = sample.mean(dim=0).detach()
+        perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
+        perplexity = perplexity / self.num_codebook
+        return perplexity
