@@ -35,13 +35,18 @@ class OzeBackbone(nn.Module):
             num_layers=self._num_layers,
             dropout=0.1,
         )
-        self.output_linear = nn.Linear(latent_dim, self._output_dim)
+        self.output_mean = nn.Linear(latent_dim, self._output_dim)
+        self.output_logvar = nn.Linear(latent_dim, self._output_dim)
 
     def encode(self, x):
         return self.encoder(x)[0]
 
     def decode(self, x):
-        return self.output_linear(self.decoder(x)[0])
+        decoded_latent = self.decoder(x)[0]
+        return (
+            self.output_mean(decoded_latent),
+            self.output_logvar(decoded_latent).exp(),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Propagate the input tensor through the encoder and the decoder.

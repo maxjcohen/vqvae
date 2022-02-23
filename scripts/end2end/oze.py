@@ -4,6 +4,7 @@ import datetime
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Normal
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -85,8 +86,8 @@ class LitOzeFull(pl.LightningModule):
         perplexity = codebook_metrics["perplexity"]
         indices = sample.argmax(-1)
         # Likelihood
-        reconstructions = self.vqvae.decode(quantized)
-        loss_reconstruction = F.mse_loss(reconstructions, observations)
+        recons_mean, recons_var = self.vqvae.decode(quantized)
+        loss_recons = -Normal(recons_mean, recons_var).log_prob(observations).mean()
         # Prior
         predictions = self.prior.forward(commands, indices)
         loss_prior = F.cross_entropy(
@@ -94,9 +95,9 @@ class LitOzeFull(pl.LightningModule):
             sample.view(-1, self.vqvae.codebook.num_codebook),
         )
         # Addup losses
-        loss = loss_reconstruction + loss_prior + loss_posterior
+        loss = loss_recons + loss_prior + loss_posterior
         self.log("train_loss", loss, on_step=False, on_epoch=True)
-        self.log("train_likelihood", loss_reconstruction, on_step=False, on_epoch=True)
+        self.log("train_likelihood", loss_recons, on_step=False, on_epoch=True)
         self.log("train_prior", loss_prior, on_step=False, on_epoch=True)
         self.log("train_posterior", loss_posterior, on_step=False, on_epoch=True)
         self.log("train_perplexity", perplexity, on_step=False, on_epoch=True)
@@ -111,20 +112,24 @@ class LitOzeFull(pl.LightningModule):
         indices = sample.argmax(-1)
         # Prior reconstruction
         prior_recons = self.prior.forward(commands, indices=indices)
-        prior_recons = self.vqvae.decode(self.vqvae.codebook(prior_recons.argmax(-1)))
+        prior_recons, _ = self.vqvae.decode(
+            self.vqvae.codebook(prior_recons.argmax(-1))
+        )
         # Prior sampling
         prior_sample = self.prior.forward(commands, indices=indices, generate=True)
-        prior_sample = self.vqvae.decode(self.vqvae.codebook(prior_sample.argmax(-1)))
+        prior_sample, _ = self.vqvae.decode(
+            self.vqvae.codebook(prior_sample.argmax(-1))
+        )
         # VQVAE reconstruction
-        reconstructions = self.vqvae.decode(quantized)
-        reconstruction_loss = F.mse_loss(reconstructions, observations)
-        self.log("val_reconstruction_loss", reconstruction_loss)
+        recons_mean, recons_var = self.vqvae.decode(quantized)
+        recons_loss = -Normal(recons_mean, recons_var).log_prob(observations).mean()
+        self.log("val_recons_loss", recons_loss)
         if batch_idx == 0 and self.current_epoch % 10 == 0:
             self.logger.experiment.track(
                 aim_fig_plot_ts(
                     {
                         "observations": observations[:, 1],
-                        "predictions": reconstructions[:, 1],
+                        "predictions": recons_mean[:, 1],
                         "prior recons": prior_recons[:, 1],
                         "prior sample": prior_sample[:, 1],
                     }
@@ -133,18 +138,18 @@ class LitOzeFull(pl.LightningModule):
                 epoch=self.current_epoch,
                 context={"subset": "val"},
             )
-        return observations, reconstructions, prior_recons, prior_sample
+        return observations, recons_mean, prior_recons, prior_sample
 
     def validation_epoch_end(self, outputs):
         if self.current_epoch % 10 == 0:
-            observations, reconstructions, prior_recons, prior_sample = map(
+            observations, recons_mean, prior_recons, prior_sample = map(
                 flatten_batches, zip(*outputs)
             )
             self.logger.experiment.track(
                 aim_fig_plot_ts(
                     {
                         "observations": observations,
-                        "predictions": reconstructions,
+                        "predictions": recons_mean,
                         "prior recons": prior_recons,
                         "prior sample": prior_sample,
                     }
