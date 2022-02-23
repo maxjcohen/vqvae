@@ -89,9 +89,10 @@ class LitOzeFull(pl.LightningModule):
         loss_reconstruction = F.mse_loss(reconstructions, observations)
         # Prior
         predictions = self.prior.forward(commands, indices)
-        log_probs = torch.log(F.softmax(predictions, dim=-1))
-        loss_prior = -torch.sum(sample * log_probs, dim=-1).mean()
-        # TODO Replace with same torch builtin as in codebook
+        loss_prior = F.cross_entropy(
+            predictions.view(-1, self.vqvae.codebook.num_codebook),
+            sample.view(-1, self.vqvae.codebook.num_codebook),
+        )
         # Addup losses
         loss = loss_reconstruction + loss_prior + loss_posterior
         self.log("train_loss", loss, on_step=False, on_epoch=True)

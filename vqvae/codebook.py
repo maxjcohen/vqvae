@@ -281,11 +281,7 @@ class GumbelCodebook(Codebook):
         sample: sample with shape `(B, K)`.
         logits: unnormalized log probabilities with shape `(B, K)`.
         """
-        # TODO Replace computation with torch builtin
-        log_probs = torch.log(F.softmax(logits, dim=-1))
-        log_probs = sample * log_probs
-        log_probs = log_probs.sum(-1).mean()
-        return log_probs
+        return -F.cross_entropy(logits, sample)
 
     def perplexity(self, sample: torch.Tensor) -> torch.float:
         """Compute the perplexity associated with the given sample.
