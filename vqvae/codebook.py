@@ -234,12 +234,12 @@ class GumbelCodebook(Codebook):
         """
         encoding_flatten = encoding.reshape(-1, self.dim_codebook)
         quantized, sample, logits = self.sample(encoding_flatten)
-        log_pdf = self.log_pdf(sample, logits)
+        loss_posterior = self.loss_posterior(sample, logits)
         perplexity = self.perplexity(sample)
         return (
             quantized.view(encoding.shape),
             sample.view(*encoding.shape[:-1], -1),
-            {"loss_latent": log_pdf, "perplexity": perplexity},
+            {"loss_latent": loss_posterior, "perplexity": perplexity},
         )
 
     def sample(
@@ -271,10 +271,21 @@ class GumbelCodebook(Codebook):
             quantized = self.codebook_lookup(sample.argmax(-1))
         return quantized, sample, logits
 
-    def log_pdf(self, sample: torch.Tensor, logits: torch.Tensor) -> torch.float:
-        """Compute the log probability density function at the given sample.
+    def loss_posterior(self, sample: torch.Tensor, logits: torch.Tensor) -> torch.float:
+        """Compute the posterior term of the ELBO.
 
-        TODO Add equation.
+        We assume the `sample` tensor in sampled from a Soft gumbel Softmax
+        distribution:
+
+        ..math
+            z_q = \sum_{k=1}^K q_k e_k
+
+        We approximate the expectation, with respect to q, to q, by using this single
+        sample:
+
+        ..math
+            \mathbb{E}_{q_\varphi} [\log q_\varphi] =
+            \sum_{k=1}^K q_k \log q_\varphi(z_q)
 
         Parameters
         ----------
