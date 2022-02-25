@@ -75,6 +75,21 @@ def flatten_batches(array):
     )
 
 
+def compute_uncertainty_metrics(litmodule, observations, commands, n_samples=100):
+    samples = litmodule.sample(observations, commands, n_samples=n_samples)
+    mins, maxs, mean = samples.min(dim=2)[0], samples.max(dim=2)[0], samples.mean(dim=2)
+
+    picp = (mins < observations) & (observations < maxs)
+    picp = picp.float().mean().item()
+    mpiw = (maxs - mins).mean().item()
+    rmse = F.mse_loss(mean, observations).sqrt().item()
+    return {
+        "picp": picp,
+        "mpiw": mpiw,
+        "rmse": rmse,
+    }
+
+
 class LitOzeFull(pl.LightningModule):
     def __init__(self, vqvae, prior, lr=1e-3):
         super().__init__()
@@ -107,6 +122,14 @@ class LitOzeFull(pl.LightningModule):
         self.log("train_prior", loss_prior, on_step=False, on_epoch=True)
         self.log("train_posterior", loss_posterior, on_step=False, on_epoch=True)
         self.log("train_perplexity", perplexity, on_step=False, on_epoch=True)
+        # Uncertainty metrics
+        if self.current_epoch % 10 == 0:
+            um = compute_uncertainty_metrics(
+                self, observations, commands, n_samples=100
+            )
+            self.log("train_picp", um["picp"], on_step=False, on_epoch=True)
+            self.log("train_mpiw", um["mpiw"], on_step=False, on_epoch=True)
+            self.log("train_rmse", um["rmse"], on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -167,6 +190,24 @@ class LitOzeFull(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), self.lr)
+
+    @torch.no_grad()
+    def sample(self, observations, commands, n_samples=100):
+        T, B, d = observations.shape
+        # Compute indices
+        encoding = self.vqvae.encode(observations)
+        quantized, indices, _ = self.vqvae.codebook.quantize(encoding)
+        indices = indices.argmax(-1)
+        # Sample trajectories
+        latents = self.prior(
+            commands.repeat_interleave(n_samples, dim=1),
+            indices.repeat_interleave(n_samples, dim=1),
+            generate=True,
+            step_sample=True,
+        )
+        mu, sigma = self.vqvae.decode(self.vqvae.codebook(latents.argmax(-1)))
+        samples = Normal(loc=mu, scale=sigma).sample()
+        return samples.view(T, B, n_samples, -1)
 
 
 if __name__ == "__main__":
