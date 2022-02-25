@@ -110,9 +110,9 @@ class LitOzeFull(pl.LightningModule):
         recons_mean, recons_var = self.vqvae.decode(quantized)
         loss_recons = -Normal(recons_mean, recons_var).log_prob(observations).mean()
         # Prior
-        predictions = self.prior.forward(commands, indices)
+        prior_predictions = self.prior.forward(commands, indices)
         loss_prior = F.cross_entropy(
-            predictions.view(-1, self.vqvae.codebook.num_codebook),
+            prior_predictions.view(-1, self.vqvae.codebook.num_codebook),
             sample.view(-1, self.vqvae.codebook.num_codebook),
         )
         # Addup losses
@@ -123,13 +123,11 @@ class LitOzeFull(pl.LightningModule):
         self.log("train_posterior", loss_posterior, on_step=False, on_epoch=True)
         self.log("train_perplexity", perplexity, on_step=False, on_epoch=True)
         # Uncertainty metrics
-        if self.current_epoch % 10 == 0:
-            um = compute_uncertainty_metrics(
+        if self.current_epoch % 50 == 0:
+            for metric, value in compute_uncertainty_metrics(
                 self, observations, commands, n_samples=100
-            )
-            self.log("train_picp", um["picp"], on_step=False, on_epoch=True)
-            self.log("train_mpiw", um["mpiw"], on_step=False, on_epoch=True)
-            self.log("train_rmse", um["rmse"], on_step=False, on_epoch=True)
+                ).items():
+                self.log(f"train_{metric}", value, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -137,23 +135,31 @@ class LitOzeFull(pl.LightningModule):
         # Encoding
         encoding = self.vqvae.encode(observations)
         # Sample
-        quantized, sample, _ = self.vqvae.codebook.quantize(encoding)
+        quantized, sample, codebook_metrics = self.vqvae.codebook.quantize(encoding)
         indices = sample.argmax(-1)
-        # Prior reconstruction
-        prior_recons = self.prior.forward(commands, indices=indices)
-        prior_recons, _ = self.vqvae.decode(
-            self.vqvae.codebook(prior_recons.argmax(-1))
-        )
-        # Prior sampling
-        prior_sample = self.prior.forward(commands, indices=indices, generate=True)
-        prior_sample, _ = self.vqvae.decode(
-            self.vqvae.codebook(prior_sample.argmax(-1))
-        )
-        # VQVAE reconstruction
+        # Likelihood
         recons_mean, recons_var = self.vqvae.decode(quantized)
-        recons_loss = -Normal(recons_mean, recons_var).log_prob(observations).mean()
-        self.log("val_recons_loss", recons_loss)
+        loss_recons = -Normal(recons_mean, recons_var).log_prob(observations).mean()
+        # Prior
+        prior_predictions = self.prior.forward(commands, indices=indices)
+        loss_prior = F.cross_entropy(
+            prior_predictions.view(-1, self.vqvae.codebook.num_codebook),
+            sample.view(-1, self.vqvae.codebook.num_codebook),
+        )
+        loss = loss_recons + loss_prior + codebook_metrics["loss_latent"]
+        self.log("val_loss", loss)
+        self.log("val_likelihood", loss_recons)
+        self.log("val_prior", loss_prior)
+        self.log("val_posterior", codebook_metrics["loss_latent"])
         if batch_idx == 0 and self.current_epoch % 10 == 0:
+            prior_recons, _ = self.vqvae.decode(
+                self.vqvae.codebook(prior_predictions.argmax(-1))
+            )
+            # Prior sampling
+            prior_sample = self.prior.forward(commands, indices=indices, generate=True)
+            prior_sample, _ = self.vqvae.decode(
+                self.vqvae.codebook(prior_sample.argmax(-1))
+            )
             self.logger.experiment.track(
                 aim_fig_plot_ts(
                     {
@@ -167,7 +173,7 @@ class LitOzeFull(pl.LightningModule):
                 epoch=self.current_epoch,
                 context={"subset": "val"},
             )
-        return observations, recons_mean, prior_recons, prior_sample
+            return observations, recons_mean, prior_recons, prior_sample
 
     def validation_epoch_end(self, outputs):
         if self.current_epoch % 10 == 0:
