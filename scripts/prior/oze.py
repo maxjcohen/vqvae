@@ -18,13 +18,14 @@ from ..utils import parser, get_logger
 class OzePrior(nn.Module):
     latent_dim = 32
 
-    def __init__(self, dim_command, num_codebook):
+    def __init__(self, dim_command, num_codebook, tau=0.1):
         super().__init__()
         self.kernel = nn.GRUCell(input_size=self.latent_dim, hidden_size=num_codebook)
         self.input_embedding = nn.GRU(
             input_size=dim_command, hidden_size=self.latent_dim, num_layers=3
         )
         self.num_codebook = num_codebook
+        self.tau = tau
 
     def forward(self, commands, indices, generate=False, step_sample=False):
         commands = self.input_embedding(commands)[0]
@@ -33,7 +34,7 @@ class OzePrior(nn.Module):
             h_t = indices_onehot[0]
             outputs = [h_t]
             for command in commands[1:]:
-                h_t = self.kernel(command, h_t)
+                h_t = self.kernel(command, h_t) / self.tau
                 h_t = (
                     F.softmax(h_t, dim=-1).multinomial(1).squeeze()
                     if step_sample
@@ -46,8 +47,9 @@ class OzePrior(nn.Module):
         outputs[0] = indices_onehot[0]
         commands = commands[1:].view(-1, self.latent_dim)
         indices_onehot = indices_onehot[:-1].view(-1, self.num_codebook)
-        outputs[1:] = self.kernel(commands, indices_onehot).view(
-            167, -1, self.num_codebook
+        outputs[1:] = (
+            self.kernel(commands, indices_onehot).view(167, -1, self.num_codebook)
+            / self.tau
         )
         return outputs
 

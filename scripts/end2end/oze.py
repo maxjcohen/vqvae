@@ -16,6 +16,8 @@ from ..utils import parser, get_logger
 from ..prior.oze import OzePrior
 from src.trainer.oze import aim_fig_plot_ts
 
+parser.add_argument("--tau-prior", default=0.1, type=float, help="Tau for prior.")
+
 
 class Experiment:
     exp_name = "oze-end2end"
@@ -43,7 +45,11 @@ class Experiment:
             dim_codebook=self.dim_codebook,
             codebook_flavor="gumbel",
         )
-        prior = OzePrior(dim_command=self.dim_command, num_codebook=self.num_codebook)
+        prior = OzePrior(
+            dim_command=self.dim_command,
+            num_codebook=self.num_codebook,
+            tau=args.tau_prior,
+        )
         self.litmodule = LitOzeFull(vqvae=vqvae, prior=prior, lr=args.lr)
 
         # Load trainer
