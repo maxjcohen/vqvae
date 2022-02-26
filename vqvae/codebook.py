@@ -212,7 +212,7 @@ class GumbelCodebook(Codebook):
     tau: temperature for the Gumbel Softmax distribution. Default is `0.5`.
     """
 
-    def __init__(self, num_codebook: int, dim_codebook: int, tau: float = 0.5):
+    def __init__(self, num_codebook: int, dim_codebook: int, tau: float = 0.1):
         super().__init__(num_codebook=num_codebook, dim_codebook=dim_codebook)
         self.tau = tau
 
