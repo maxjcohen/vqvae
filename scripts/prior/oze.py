@@ -20,16 +20,22 @@ class OzePrior(nn.Module):
 
     def __init__(self, dim_command, num_codebook, tau=0.1):
         super().__init__()
+        p_dropout = 0.2
         self.kernel = nn.GRUCell(input_size=self.latent_dim, hidden_size=num_codebook)
         self.input_embedding = nn.GRU(
-            input_size=dim_command, hidden_size=self.latent_dim, num_layers=3
+            input_size=dim_command,
+            hidden_size=self.latent_dim,
+            num_layers=3,
+            dropout=p_dropout,
         )
         self.num_codebook = num_codebook
         self.tau = tau
+        self.dropout = nn.Dropout(p=p_dropout)
 
     def forward(self, commands, indices, generate=False, step_sample=False):
         commands = self.input_embedding(commands)[0]
         indices_onehot = F.one_hot(indices, num_classes=self.num_codebook).float()
+        indices = self.dropout(indices_onehot)
         if generate:
             h_t = indices_onehot[0]
             outputs = [h_t]

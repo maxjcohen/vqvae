@@ -58,7 +58,7 @@ class Experiment:
         checkpoint_callback = ModelCheckpoint(
             dirpath=Path("checkpoints") / self.exp_name,
             filename=f"{datetime.datetime.now().strftime('%Y_%m_%d__%H%M%S')}",
-            monitor="train_prior",
+            monitor="val_prior",
             save_last=True,
         )
         self.trainer = pl.Trainer(
@@ -151,7 +151,7 @@ class LitOzeFull(pl.LightningModule):
         self.log("val_likelihood", loss_recons)
         self.log("val_prior", loss_prior)
         self.log("val_posterior", codebook_metrics["loss_latent"])
-        if batch_idx == 0 and self.current_epoch % 10 == 0:
+        if batch_idx == 1 and self.current_epoch % 10 == 0:
             prior_recons, _ = self.vqvae.decode(
                 self.vqvae.codebook(prior_predictions.argmax(-1))
             )
@@ -163,10 +163,10 @@ class LitOzeFull(pl.LightningModule):
             self.logger.experiment.track(
                 aim_fig_plot_ts(
                     {
-                        "observations": observations[:, 1],
-                        "predictions": recons_mean[:, 1],
-                        "prior recons": prior_recons[:, 1],
-                        "prior sample": prior_sample[:, 1],
+                        "observations": observations[:, 0],
+                        "predictions": recons_mean[:, 0],
+                        "prior recons": prior_recons[:, 0],
+                        "prior sample": prior_sample[:, 0],
                     }
                 ),
                 name="batch-comparison",
