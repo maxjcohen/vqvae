@@ -62,8 +62,8 @@ def compute_occupancy(
     if date.hour < 8 or date.hour > 18:
         return 0
 
-    date_start_lockdown = datetime.date(year=2020, month=3, day=17)
-    date_end_lockdown = datetime.date(year=2020, month=5, day=11)
+    date_start_lockdown = datetime.datetime(year=2020, month=3, day=17)
+    date_end_lockdown = datetime.datetime(year=2020, month=5, day=11)
 
     # Full occupancy before lockdown
     occupancy = int(date < date_start_lockdown)
@@ -71,7 +71,7 @@ def compute_occupancy(
     # After lockdown
     if date_end_lockdown < date:
         # Ocupancy increases gradually
-        occupancy += 1 - np.exp(-(date.date() - date_end_lockdown).days / delta)
+        occupancy += 1 - np.exp(-(date - date_end_lockdown).days / delta)
 
         # Fixed redduction
         occupancy -= occupancy * talon
