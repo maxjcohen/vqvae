@@ -122,12 +122,36 @@ class LitOzeFull(pl.LightningModule):
         self.log("train_prior", loss_prior, on_step=False, on_epoch=True)
         self.log("train_posterior", loss_posterior, on_step=False, on_epoch=True)
         self.log("train_perplexity", perplexity, on_step=False, on_epoch=True)
-        # Uncertainty metrics
-        if self.current_epoch % 50 == 0:
+        # Uncertainty metrics and plotting
+        if self.current_epoch % 10 == 0:
             for metric, value in compute_uncertainty_metrics(
                 self, observations, commands, n_samples=100
-                ).items():
+            ).items():
                 self.log(f"train_{metric}", value, on_step=False, on_epoch=True)
+            if batch_idx == 1:
+                prior_recons, _ = self.vqvae.decode(
+                    self.vqvae.codebook(prior_predictions.argmax(-1))
+                )
+                # Prior sampling
+                prior_sample = self.prior.forward(
+                    commands, indices=indices, generate=True
+                )
+                prior_sample, _ = self.vqvae.decode(
+                    self.vqvae.codebook(prior_sample.argmax(-1))
+                )
+                self.logger.experiment.track(
+                    aim_fig_plot_ts(
+                        {
+                            "observations": observations[:, 0],
+                            "predictions": recons_mean[:, 0],
+                            "prior recons": prior_recons[:, 0],
+                            "prior sample": prior_sample[:, 0],
+                        }
+                    ),
+                    name="batch-comparison",
+                    epoch=self.current_epoch,
+                    context={"subset": "train"},
+                )
         return loss
 
     def validation_step(self, batch, batch_idx):
