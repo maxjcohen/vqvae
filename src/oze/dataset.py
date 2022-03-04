@@ -1,6 +1,7 @@
 import datetime
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
@@ -58,3 +59,16 @@ class OzeDataset(Dataset):
         except KeyError:
             raise NameError(f"Can't rescale array with unknown label {label}.")
         return array * array_std + array_mean
+
+
+class OzeDatasetRolling(OzeDataset):
+    rolling_size = 24
+
+    def __getitem__(self, idx):
+        return (
+            self.u[idx * self.rolling_size : idx * self.rolling_size + self.T],
+            self.y[idx * self.rolling_size : idx * self.rolling_size + self.T],
+        )
+
+    def __len__(self):
+        return (len(self.y) - self.T) // self.rolling_size
