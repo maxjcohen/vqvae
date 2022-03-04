@@ -234,7 +234,7 @@ class GumbelCodebook(Codebook):
         """
         encoding_flatten = encoding.reshape(-1, self.dim_codebook)
         quantized, sample, logits = self.sample(encoding_flatten)
-        loss_posterior = self.loss_posterior(sample, logits)
+        loss_posterior = self.loss_posterior(logits)
         perplexity = self.perplexity(sample)
         return (
             quantized.view(encoding.shape),
@@ -271,28 +271,22 @@ class GumbelCodebook(Codebook):
             quantized = self.codebook_lookup(sample.argmax(-1))
         return quantized, sample, logits
 
-    def loss_posterior(self, sample: torch.Tensor, logits: torch.Tensor) -> torch.float:
+    def loss_posterior(self, logits: torch.Tensor) -> torch.float:
         """Compute the posterior term of the ELBO.
 
-        We assume the `sample` tensor in sampled from a Soft gumbel Softmax
-        distribution:
-
-        ..math
-            z_q = \sum_{k=1}^K q_k e_k
-
-        We approximate the expectation, with respect to q, to q, by using this single
-        sample:
+        We approximate the expectation of q, with respect to q, by developping the
+        expression:
 
         ..math
             \mathbb{E}_{q_\varphi} [\log q_\varphi] =
-            \sum_{k=1}^K q_k \log q_\varphi(z_q)
+            \sum_{k=1}^K q_\varphi(z_q = e_k | z_e) \log q_\varphi(z_q = e_k | z_e)
 
         Parameters
         ----------
-        sample: sample with shape `(B, K)`.
         logits: unnormalized log probabilities with shape `(B, K)`.
         """
-        return -F.cross_entropy(logits, sample)
+        probs = F.softmax(logits, -1)
+        return -F.cross_entropy(logits, target=probs)
 
     def perplexity(self, sample: torch.Tensor) -> torch.float:
         """Compute the perplexity associated with the given sample.
