@@ -32,9 +32,19 @@ class LitCifarTrainer(pl.LightningModule):
         reconstructions_loss = self.loss(reconstructions, images)
         loss = reconstructions_loss + codebook_metrics["loss_latent"]
         self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log("train_reconstruction_loss", reconstructions_loss, on_step=False, on_epoch=True)
+        self.log("train_posterior", codebook_metrics["loss_latent"], on_step=False, on_epoch=True)
         self.log(
             "perplexity", codebook_metrics["perplexity"], on_step=False, on_epoch=True
         )
+        if batch_idx == 0:
+            self.logger.experiment.track(
+                Image(image_compare_reconstructions(images, reconstructions)),
+                name="comparison",
+                epoch=self.current_epoch,
+                context={"subset": "train"},
+            )
+
         return loss
 
     def validation_step(self, images, batch_idx):
