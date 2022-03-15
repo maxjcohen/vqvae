@@ -61,7 +61,7 @@ class CifarDataModule(pl.LightningDataModule):
 class Experiment:
     exp_name = "vqvae-cifar-gumbel"
     dim_codebook = 32
-    num_codebook = 256
+    num_codebook = 128
     dataset_path = "./datasets/CIFAR10"
     lr = 3e-4
 
