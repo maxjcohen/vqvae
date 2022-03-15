@@ -7,7 +7,7 @@ setuptools.setup(
     author_email="lol44zla5@relay.firefox.com",
     description="Minimal VQ-VAE implementation.",
     url="https://github.com/maxjcohen/vqvae",
-    packages=["vqvae"],
+    packages=["vqvae", "vqvae.backbone"],
     python_requires=">=3.6",
     install_requires=[
         "torch",
