@@ -49,6 +49,7 @@ class Codebook(torch.nn.Embedding):
         Returns
         -------
         quantized: quantized tensor with the same shape as the input vector.
+        indices: indices sampled with shape `(*, K)`.
         losses: dictionary containing the latent loss between encodings and selected
         codebooks, and the normalized perplexity.
         """
@@ -58,15 +59,16 @@ class Codebook(torch.nn.Embedding):
         loss_latent = F.mse_loss(encoding, quantized)
         quantized = encoding + (quantized - encoding).detach()
         # Compute perplexity
+        indices_onehot = F.one_hot(indices, num_classes=self.num_codebook)
         probs = (
-            F.one_hot(indices, num_classes=self.num_codebook)
+            indices_onehot
             .view(-1, self.num_codebook)
             .float()
             .mean(dim=0)
         )
         perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
         perplexity = perplexity / self.num_codebook
-        return quantized, {
+        return quantized, indices_onehot, {
             "loss_latent": loss_latent,
             "perplexity": perplexity,
         }
@@ -150,6 +152,7 @@ class EMACodebook(Codebook):
         Returns
         -------
         quantized: quantized tensor with the same shape as the input vector.
+        indices: indices sampled with shape `(*, K)`.
         losses: dictionary containing the latent loss between encodings and selected
         codebooks, and the normalized perplexity.
         """
@@ -184,7 +187,7 @@ class EMACodebook(Codebook):
         quantized = self.codebook_lookup(indices).view(encoding.shape)
         loss_latent = F.mse_loss(encoding, quantized)
         quantized = encoding + (quantized - encoding).detach()
-        return quantized, {
+        return quantized, indices_onehot, {
             "loss_latent": loss_latent,
             "perplexity": perplexity,
         }
