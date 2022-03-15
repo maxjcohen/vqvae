@@ -247,4 +247,5 @@ class GumbelCodebook(Codebook):
         perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
         perplexity = perplexity / self.num_codebook
         quantized = quantized.view(encoding.shape)
-        return quantized, {"loss_latent": kl, "perplexity": perplexity}
+        indices = indices.view(*encoding.shape[:-1], -1)
+        return quantized, indices, {"loss_latent": kl, "perplexity": perplexity}
