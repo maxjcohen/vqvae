@@ -12,6 +12,7 @@ from vqvae import CifarVQVAE
 from src.trainer.cifar import LitCifarTrainer
 from ..utils import parser, get_logger
 
+parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
 
 class CifarDataModule(pl.LightningDataModule):
     def __init__(self, dataset_path: Path, batch_size: int, num_workers: int = 2):
@@ -78,7 +79,7 @@ class Experiment:
         model = CifarVQVAE(
             num_codebook=self.num_codebook,
             dim_codebook=self.dim_codebook,
-            codebook_flavor="gumbel",
+            codebook_flavor=args.flavor,
         )
         self.litmodule = LitCifarTrainer(model, lr=args.lr)
 
