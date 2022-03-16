@@ -241,7 +241,7 @@ class GumbelCodebook(Codebook):
         kl = gumbel_softmax.probs * torch.log(
             gumbel_softmax.probs * self.num_codebook + self._eps
         )
-        kl = kl.sum(-1).mean()
+        kl = kl.sum()
         # Compute perplexity
         probs = indices.mean(dim=0)
         perplexity = torch.exp(-torch.sum(probs * torch.log(probs + self._eps)))
