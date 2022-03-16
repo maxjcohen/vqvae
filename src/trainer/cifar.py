@@ -26,14 +26,15 @@ class LitCifarTrainer(pl.LightningModule):
         # Switch to channel last
         encoding = encoding.permute(0, 2, 3, 1)
         quantized, _, codebook_metrics = self.model.codebook.quantize(encoding)
+        posterior_loss = codebook_metrics["loss_latent"]
         # Switch to channel first
         quantized = quantized.permute(0, 3, 1, 2)
         reconstructions = self.model.decode(quantized)
         reconstruction_loss = self.loss(reconstructions, images)
-        loss = reconstruction_loss + codebook_metrics["loss_latent"]
+        loss = reconstruction_loss + posterior_loss
         self.log("train_loss", loss, on_step=False, on_epoch=True)
         self.log("train_reconstruction_loss", reconstruction_loss, on_step=False, on_epoch=True)
-        self.log("train_posterior", codebook_metrics["loss_latent"], on_step=False, on_epoch=True)
+        self.log("train_posterior", posterior_loss, on_step=False, on_epoch=True)
         self.log(
             "perplexity", codebook_metrics["perplexity"], on_step=False, on_epoch=True
         )
