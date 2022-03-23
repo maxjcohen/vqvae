@@ -38,6 +38,7 @@ class CifarVQVAE(nn.Module):
             "gumbel": GumbelCodebook,
         }[codebook_flavor]
         self.codebook = CodebookFlavor(num_codebook, dim_codebook)
+        self.codebook_flavor = codebook_flavor
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Propagate the input tensor through the encoder, quantize and decode.

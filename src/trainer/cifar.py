@@ -27,11 +27,13 @@ class LitCifarTrainer(pl.LightningModule):
         # Switch to channel last
         encoding = encoding.permute(0, 2, 3, 1)
         quantized, _, codebook_metrics = self.model.codebook.quantize(encoding)
-        posterior_loss = codebook_metrics["loss_latent"] / N
+        posterior_loss = codebook_metrics["loss_latent"]
+        if self.model.codebook_flavor == "gumbel":
+            posterior_loss = posterior_loss / N
         # Switch to channel first
         quantized = quantized.permute(0, 3, 1, 2)
         reconstructions = self.model.decode(quantized)
-        reconstruction_loss = F.mse_loss(reconstructions, images, reduction="none").sum() / N
+        reconstruction_loss = F.mse_loss(reconstructions, images, reduction="none").mean()
         loss = reconstruction_loss + posterior_loss
         self.log("train_loss", loss, on_step=False, on_epoch=True)
         self.log("train_reconstruction_loss", reconstruction_loss, on_step=False, on_epoch=True)
@@ -50,9 +52,8 @@ class LitCifarTrainer(pl.LightningModule):
         return loss
 
     def validation_step(self, images, batch_idx):
-        N = images.numel()
         reconstructions = self.model(images)
-        reconstruction_loss = F.mse_loss(reconstructions, images, reduction="none").sum() / N
+        reconstruction_loss = F.mse_loss(reconstructions, images, reduction="none").mean()
         self.log("val_reconstruction_loss", reconstruction_loss)
         if batch_idx == 0:
             self.logger.experiment.track(
