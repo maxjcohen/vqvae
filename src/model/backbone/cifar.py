@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ..modules import ResNetBlock
+from vqvae.modules import ResNetBlock
 
 
 class CifarAutoEncoder(nn.Module):

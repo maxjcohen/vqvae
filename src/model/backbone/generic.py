@@ -3,7 +3,7 @@ from typing import List, Optional
 import torch
 import torch.nn as nn
 
-from ..modules import ResNetBlock
+from vqvae.modules import ResNetBlock
 
 
 class GenericAutoEncoder(nn.Module):

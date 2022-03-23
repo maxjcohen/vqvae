@@ -7,8 +7,7 @@ from torchvision import datasets, transforms
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from vqvae import CifarVQVAE
-
+from src.model.cifar import CifarVQVAE
 from src.trainer.cifar import LitCifarTrainer
 from ..utils import parser, get_logger
 
@@ -59,7 +58,7 @@ class CifarDataModule(pl.LightningDataModule):
 
 
 class Experiment:
-    exp_name = "vqvae-cifar-gumbel"
+    exp_name = "vqvae-cifar"
     dim_codebook = 32
     num_codebook = 128
     dataset_path = "./datasets/CIFAR10"
