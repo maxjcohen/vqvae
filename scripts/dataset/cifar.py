@@ -25,13 +25,19 @@ class CifarDataModule(pl.LightningDataModule):
             self._dataset_path,
             train=True,
             download=True,
-            transform=transforms.ToTensor(),
+            transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean=0.45, std=0.227)
+            ])
         )
         self.dataset_val = datasets.CIFAR10(
             self._dataset_path,
             train=False,
             download=True,
-            transform=transforms.ToTensor(),
+            transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean=0.45, std=0.227)
+            ])
         )
 
     def train_dataloader(self):

@@ -5,14 +5,15 @@ from aim import Image
 
 
 def image_compare_reconstructions(originals, reconstructions):
-    return torch.cat(
+    image = torch.cat(
         [
             torch.cat([original, reconstruction], dim=1)
             for original, reconstruction in zip(originals, reconstructions)
         ],
         dim=2,
-    )
-
+    )*0.227+0.45
+    image = image.clip(min=0, max=1)
+    return image
 
 class LitCifarTrainer(pl.LightningModule):
     def __init__(self, model, lr=1e-3):

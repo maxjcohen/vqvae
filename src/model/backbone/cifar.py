@@ -61,7 +61,6 @@ class CifarAutoEncoder(nn.Module):
                 padding=1,
                 output_padding=1,
             ),
-            nn.Sigmoid(),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

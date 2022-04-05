@@ -1,5 +1,5 @@
 #!/bin/sh
-EPOCHS=5
+EPOCHS=20
 LR=1e-3
 NUM_WOKERS=4
 GPUS=1
