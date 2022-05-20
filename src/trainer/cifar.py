@@ -3,6 +3,8 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from aim import Image
 
+from ..model.cifar import CifarVQVAE
+
 
 def image_compare_reconstructions(originals, reconstructions):
     image = torch.cat(
@@ -16,10 +18,15 @@ def image_compare_reconstructions(originals, reconstructions):
     return image
 
 class LitCifarTrainer(pl.LightningModule):
-    def __init__(self, model, lr=1e-3):
+    def __init__(self, num_codebook, dim_codebook, codebook_flavor="classic", lr=1e-3):
         super().__init__()
+        self.save_hyperparameters()
+        self.model = CifarVQVAE(
+            num_codebook=num_codebook,
+            dim_codebook=dim_codebook,
+            codebook_flavor=codebook_flavor,
+        )
         self.lr = lr
-        self.model = model
         self.loss = torch.nn.MSELoss()
 
     def training_step(self, images, batch_idx):

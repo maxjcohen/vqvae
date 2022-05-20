@@ -8,7 +8,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from aim.pytorch_lightning import AimLogger
 
-from src.model.cifar import CifarVQVAE
 from src.trainer.cifar import LitCifarTrainer
 from ..utils import parser
 
@@ -64,7 +63,7 @@ class CifarDataModule(pl.LightningDataModule):
 
 
 class Experiment:
-    exp_name = "vqvae-cifar"
+    exp_name = "vqvae-cifar-train"
     dim_codebook = 32
     num_codebook = 128
     dataset_path = "./datasets/CIFAR10"
@@ -81,12 +80,12 @@ class Experiment:
         )
 
         # Load LitModule
-        model = CifarVQVAE(
+        self.litmodule = LitCifarTrainer(
             num_codebook=self.num_codebook,
             dim_codebook=self.dim_codebook,
             codebook_flavor=args.flavor,
+            lr=args.lr,
         )
-        self.litmodule = LitCifarTrainer(model, lr=args.lr)
 
         # Load trainer
         self.logger = AimLogger(
