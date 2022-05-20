@@ -14,6 +14,7 @@ from ..utils import parser
 
 parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
 
+
 class CifarDataModule(pl.LightningDataModule):
     def __init__(self, dataset_path: Path, batch_size: int, num_workers: int = 2):
         super().__init__()
@@ -26,19 +27,17 @@ class CifarDataModule(pl.LightningDataModule):
             self._dataset_path,
             train=True,
             download=True,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean=0.45, std=0.227)
-            ])
+            transform=transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize(mean=0.45, std=0.227)]
+            ),
         )
         self.dataset_val = datasets.CIFAR10(
             self._dataset_path,
             train=False,
             download=True,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean=0.45, std=0.227)
-            ])
+            transform=transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize(mean=0.45, std=0.227)]
+            ),
         )
 
     def train_dataloader(self):

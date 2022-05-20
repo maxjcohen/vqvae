@@ -19,5 +19,5 @@ parser.add_argument(
     type=int,
     help="Batch size for dataloaders. Default is 16.",
 )
-parser.add_argument("--gpus", default='0', type=str, help="Lightning gpus.")
+parser.add_argument("--gpus", default="0", type=str, help="Lightning gpus.")
 parser.add_argument("--lr", default=None, type=float, help="Learning rate.")
