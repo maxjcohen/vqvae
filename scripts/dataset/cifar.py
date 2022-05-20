@@ -6,10 +6,11 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
+from aim.pytorch_lightning import AimLogger
 
 from src.model.cifar import CifarVQVAE
 from src.trainer.cifar import LitCifarTrainer
-from ..utils import parser, get_logger
+from ..utils import parser
 
 parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
 
@@ -89,7 +90,11 @@ class Experiment:
         self.litmodule = LitCifarTrainer(model, lr=args.lr)
 
         # Load trainer
-        self.logger = get_logger(self.exp_name)
+        self.logger = AimLogger(
+            experiment=self.exp_name,
+            system_tracking_interval=None,
+            log_system_params=False,
+        )
         self.logger.experiment["hparams"] = vars(args)
         checkpoint_callback = ModelCheckpoint(
             dirpath=Path("checkpoints") / self.exp_name,

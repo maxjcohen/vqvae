@@ -21,13 +21,3 @@ parser.add_argument(
 )
 parser.add_argument("--gpus", default='0', type=str, help="Lightning gpus.")
 parser.add_argument("--lr", default=None, type=float, help="Learning rate.")
-
-def get_logger(exp_name=None):
-    try:
-        from aim.pytorch_lightning import AimLogger
-
-        logger = AimLogger(experiment=exp_name, system_tracking_interval=None)
-    except ImportError:
-        logger = None
-    print(f"Using logger {logger}.")
-    return logger
