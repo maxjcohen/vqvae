@@ -68,7 +68,7 @@ class Experiment:
     dim_codebook = 32
     num_codebook = 128
     dataset_path = "./datasets/CIFAR10"
-    lr = 3e-4
+    lr = 1e-3
 
     def __init__(self, args):
         args.lr = args.lr or self.lr
