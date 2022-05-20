@@ -80,12 +80,15 @@ class Experiment:
         )
 
         # Load LitModule
-        self.litmodule = LitCifarTrainer(
-            num_codebook=self.num_codebook,
-            dim_codebook=self.dim_codebook,
-            codebook_flavor=args.flavor,
-            lr=args.lr,
-        )
+        if args.load_path:
+            self.litmodule = LitCifarTrainer.load_from_checkpoint(args.load_path)
+        else:
+            self.litmodule = LitCifarTrainer(
+                num_codebook=self.num_codebook,
+                dim_codebook=self.dim_codebook,
+                codebook_flavor=args.flavor,
+                lr=args.lr,
+            )
 
         # Load trainer
         self.logger = AimLogger(

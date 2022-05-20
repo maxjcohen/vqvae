@@ -21,3 +21,4 @@ parser.add_argument(
 )
 parser.add_argument("--gpus", default="0", type=str, help="Lightning gpus.")
 parser.add_argument("--lr", default=None, type=float, help="Learning rate.")
+parser.add_argument("--load-path", default=None, type=str, help="Pytorch lightning checkpoint path to laod from.")
