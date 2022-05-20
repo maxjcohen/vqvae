@@ -5,7 +5,7 @@ NUM_WOKERS=4
 GPUS=1
 
 for flavor in classic ema gumbel; do
-    python -m scripts.dataset.cifar \
+    python -m scripts.cifar.train \
 	--gpus $GPUS \
 	--num-workers $NUM_WOKERS \
 	--epochs $EPOCHS \
