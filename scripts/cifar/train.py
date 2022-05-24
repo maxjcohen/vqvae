@@ -15,28 +15,38 @@ parser.add_argument("--flavor", default="classic", type=str, help="Codebook flav
 
 
 class CifarDataModule(pl.LightningDataModule):
-    def __init__(self, dataset_path: Path, batch_size: int, num_workers: int = 2):
+    mean: float = 0.4734
+    std: float = 0.2516
+
+    def __init__(
+        self,
+        dataset_path: Path,
+        batch_size: int,
+        num_workers: int = 2,
+        standardize: bool = False,
+    ):
         super().__init__()
         self._dataset_path = dataset_path
         self._batch_size = batch_size
         self._num_workers = num_workers
+        self._transforms = transforms.ToTensor()
+        if standardize:
+            self._transforms = transforms.Compose(
+                [self._transforms, transforms.Normalize(mean=self.mean, std=self.std)]
+            )
 
     def setup(self, stage=None):
         self.dataset_train = datasets.CIFAR10(
             self._dataset_path,
             train=True,
             download=True,
-            transform=transforms.Compose(
-                [transforms.ToTensor(), transforms.Normalize(mean=0.45, std=0.227)]
-            ),
+            transform=self._transforms,
         )
         self.dataset_val = datasets.CIFAR10(
             self._dataset_path,
             train=False,
             download=True,
-            transform=transforms.Compose(
-                [transforms.ToTensor(), transforms.Normalize(mean=0.45, std=0.227)]
-            ),
+            transform=self._transforms,
         )
 
     def train_dataloader(self):
@@ -60,6 +70,9 @@ class CifarDataModule(pl.LightningDataModule):
     @staticmethod
     def _collate_fn(batch):
         return torch.stack([images for images, label in batch])
+
+    def rescale(self, tensor: torch.Tensor) -> torch.Tensor:
+        return tensor * self.std + self.mean
 
 
 class Experiment:

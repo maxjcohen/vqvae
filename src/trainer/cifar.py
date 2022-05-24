@@ -13,9 +13,10 @@ def image_compare_reconstructions(originals, reconstructions):
             for original, reconstruction in zip(originals, reconstructions)
         ],
         dim=2,
-    )*0.227+0.45
+    )
     image = image.clip(min=0, max=1)
     return image
+
 
 class LitCifarTrainer(pl.LightningModule):
     def __init__(self, num_codebook, dim_codebook, codebook_flavor="classic", lr=1e-3):
