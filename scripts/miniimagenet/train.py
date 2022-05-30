@@ -59,7 +59,7 @@ class MiniImagenetDataModule(pl.LightningDataModule):
         )
 
     def rescale(self, tensor: torch.Tensor) -> torch.Tensor:
-        return tensor * self.std + self.mean
+        return tensor * self.dataset_train.std + self.dataset_train.mean
 
 
 class Experiment:
