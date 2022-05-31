@@ -7,6 +7,8 @@ from pathlib import Path
 import h5py
 import torch
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+import pytorch_lightning as pl
 import gdown
 
 
@@ -142,3 +144,51 @@ class MiniImagenet(Dataset):
         Rescaled tensor with values between `0` and `1`.
         """
         return tensor * self.std + self.mean
+
+
+class MiniImagenetDataModule(pl.LightningDataModule):
+    def __init__(
+        self,
+        dataset_path: Path,
+        batch_size: int,
+        num_workers: int = 2,
+        standardize: bool = False,
+    ):
+        super().__init__()
+        self._dataset_path = dataset_path
+        self._batch_size = batch_size
+        self._num_workers = num_workers
+        self._standardize = standardize
+
+    def setup(self, stage=None):
+        self.dataset_train = MiniImagenet(
+            self._dataset_path,
+            split="train",
+            download=True,
+            standardize=self._standardize,
+        )
+        self.dataset_val = MiniImagenet(
+            self._dataset_path,
+            split="val",
+            download=True,
+            standardize=self._standardize,
+        )
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.dataset_train,
+            batch_size=self._batch_size,
+            num_workers=self._num_workers,
+            shuffle=True,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(
+            self.dataset_val,
+            batch_size=self._batch_size,
+            num_workers=self._num_workers,
+            shuffle=False,
+        )
+
+    def rescale(self, tensor: torch.Tensor) -> torch.Tensor:
+        return tensor * self.dataset_train.std + self.dataset_train.mean

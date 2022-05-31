@@ -8,64 +8,16 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from aim.pytorch_lightning import AimLogger
 
 from src.trainer.cifar import LitCifarTrainer
-from src.dataset import MiniImagenet
+from src.dataset import MiniImagenetDataModule
 from ..utils import parser
 
 parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
 
 
-class MiniImagenetDataModule(pl.LightningDataModule):
-    def __init__(
-        self,
-        dataset_path: Path,
-        batch_size: int,
-        num_workers: int = 2,
-        standardize: bool = False,
-    ):
-        super().__init__()
-        self._dataset_path = dataset_path
-        self._batch_size = batch_size
-        self._num_workers = num_workers
-        self._standardize = standardize
-
-    def setup(self, stage=None):
-        self.dataset_train = MiniImagenet(
-            self._dataset_path,
-            split="train",
-            download=True,
-            standardize=self._standardize,
-        )
-        self.dataset_val = MiniImagenet(
-            self._dataset_path,
-            split="val",
-            download=True,
-            standardize=self._standardize,
-        )
-
-    def train_dataloader(self):
-        return DataLoader(
-            self.dataset_train,
-            batch_size=self._batch_size,
-            num_workers=self._num_workers,
-            shuffle=True,
-        )
-
-    def val_dataloader(self):
-        return DataLoader(
-            self.dataset_val,
-            batch_size=self._batch_size,
-            num_workers=self._num_workers,
-            shuffle=False,
-        )
-
-    def rescale(self, tensor: torch.Tensor) -> torch.Tensor:
-        return tensor * self.dataset_train.std + self.dataset_train.mean
-
-
 class Experiment:
     exp_name = "vqvae-miniimagenet-train"
     dim_codebook = 32
-    num_codebook = 128
+    num_codebook = 64
     dataset_path = "./datasets/miniImagenet"
     lr = 1e-3
 

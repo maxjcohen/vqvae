@@ -1,1 +1,1 @@
-from .mini_imagenet import MiniImagenet
+from .mini_imagenet import MiniImagenet, MiniImagenetDataModule
