@@ -9,7 +9,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--num-workers",
-    default=1,
+    default=4,
     type=int,
     help="Number of workers for dataloaders. Default is 1.",
 )
