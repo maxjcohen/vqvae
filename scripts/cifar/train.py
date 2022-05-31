@@ -12,6 +12,7 @@ from src.trainer.cifar import LitCifarTrainer
 from ..utils import parser
 
 parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
+parser.set_defaults(epochs=40)
 
 
 class CifarDataModule(pl.LightningDataModule):
@@ -78,9 +79,9 @@ class CifarDataModule(pl.LightningDataModule):
 class Experiment:
     exp_name = "vqvae-cifar-train"
     dim_codebook = 32
-    num_codebook = 128
+    num_codebook = 64
     dataset_path = "./datasets/CIFAR10"
-    lr = 1e-3
+    lr = 3e-4
 
     def __init__(self, args):
         args.lr = args.lr or self.lr
