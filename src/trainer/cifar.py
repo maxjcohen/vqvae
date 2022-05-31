@@ -18,11 +18,12 @@ def image_compare_reconstructions(originals, reconstructions):
     return image
 
 
-class LitCifarTrainer(pl.LightningModule):
+class LitTrainer(pl.LightningModule):
+    VQVAE = CifarVQVAE
     def __init__(self, num_codebook, dim_codebook, codebook_flavor="classic", lr=1e-3):
         super().__init__()
         self.save_hyperparameters()
-        self.model = CifarVQVAE(
+        self.model = self.VQVAE(
             num_codebook=num_codebook,
             dim_codebook=dim_codebook,
             codebook_flavor=codebook_flavor,

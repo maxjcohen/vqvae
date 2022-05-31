@@ -7,12 +7,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from aim.pytorch_lightning import AimLogger
 
-from src.trainer.cifar import LitCifarTrainer
+from src.model.miniimagenet import MiniImagenetVQVAE
+from src.trainer.cifar import LitTrainer
 from src.dataset import MiniImagenetDataModule
 from ..utils import parser
 
 parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
 
+LitTrainer.VQVAE = MiniImagenetVQVAE
 
 class Experiment:
     exp_name = "vqvae-miniimagenet-train"
@@ -33,9 +35,9 @@ class Experiment:
 
         # Load LitModule
         if args.load_path:
-            self.litmodule = LitCifarTrainer.load_from_checkpoint(args.load_path)
+            self.litmodule = LitTrainer.load_from_checkpoint(args.load_path)
         else:
-            self.litmodule = LitCifarTrainer(
+            self.litmodule = LitTrainer(
                 num_codebook=self.num_codebook,
                 dim_codebook=self.dim_codebook,
                 codebook_flavor=args.flavor,

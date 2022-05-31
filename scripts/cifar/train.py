@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from aim.pytorch_lightning import AimLogger
 
-from src.trainer.cifar import LitCifarTrainer
+from src.trainer.cifar import LitTrainer
 from ..utils import parser
 
 parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
@@ -95,9 +95,9 @@ class Experiment:
 
         # Load LitModule
         if args.load_path:
-            self.litmodule = LitCifarTrainer.load_from_checkpoint(args.load_path)
+            self.litmodule = LitTrainer.load_from_checkpoint(args.load_path)
         else:
-            self.litmodule = LitCifarTrainer(
+            self.litmodule = LitTrainer(
                 num_codebook=self.num_codebook,
                 dim_codebook=self.dim_codebook,
                 codebook_flavor=args.flavor,
