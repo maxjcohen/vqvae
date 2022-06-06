@@ -13,7 +13,7 @@ from src.dataset import MiniImagenetDataModule
 from ..utils import parser
 
 parser.add_argument("--flavor", default="classic", type=str, help="Codebook flavor.")
-
+parser.set_defaults(lr=1e-3, epochs=20, batch_size=16)
 LitTrainer.VQVAE = MiniImagenetVQVAE
 
 class Experiment:
@@ -21,11 +21,8 @@ class Experiment:
     dim_codebook = 32
     num_codebook = 64
     dataset_path = "./datasets/miniImagenet"
-    lr = 1e-3
 
     def __init__(self, args):
-        args.lr = args.lr or self.lr
-
         # Load dataset
         self.datamodule = MiniImagenetDataModule(
             dataset_path=self.dataset_path,
